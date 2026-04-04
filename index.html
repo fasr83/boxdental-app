@@ -38,6 +38,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .app-title{font-size:1.1rem;font-weight:700;margin-bottom:6px}
 .app-desc{font-size:.82rem;opacity:.7;line-height:1.4}
 .footer{margin-top:40px;font-size:.75rem;opacity:.5;line-height:1.6}
+.app-card.locked{opacity:.35;cursor:not-allowed;pointer-events:none;position:relative}
+.app-card.locked::after{content:'🔒';position:absolute;top:10px;right:14px;font-size:1.2rem}
+.app-card.locked:hover{transform:none;box-shadow:none}
+.role-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.72rem;font-weight:700;margin-left:8px}
+.role-badge.admin{background:rgba(239,68,68,.25);color:#FCA5A5}
+.role-badge.subadmin{background:rgba(251,191,36,.25);color:#FCD34D}
+.access-denied{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 16px;font-size:.82rem;color:#FCA5A5;margin-bottom:16px;display:none}
 </style>
 </head>
 <body>
@@ -69,33 +76,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <div class="apps-grid">
-    <a href="Planificador_BoxDental.html" class="app-card">
-      <div class="app-icon">📊</div>
-      <div class="app-title">Centro de Control</div>
-      <div class="app-desc">Dashboard, planificador diario y gestión de tareas con seguimiento de progreso</div>
-    </a>
-    <a href="Conteo_Inventario_BoxDental.html" class="app-card">
-      <div class="app-icon">📦</div>
-      <div class="app-title">Inventario</div>
-      <div class="app-desc">Conteo de inventario, control de stock, proveedores y productos con 900+ items</div>
-    </a>
-    <a href="Facturacion_BoxDental.html" class="app-card">
-      <div class="app-icon">🧾</div>
-      <div class="app-title">Facturación</div>
-      <div class="app-desc">Notas de venta, facturas, cotizaciones, pagos y despachos con rótulos de envío</div>
-    </a>
-    <a href="Reportes_BoxDental.html" class="app-card">
-      <div class="app-icon">📈</div>
-      <div class="app-title">Reportes</div>
-      <div class="app-desc">Dashboard de ventas, gráficas, compras, inventario y exportación a CSV</div>
-    </a>
-    <a href="BoxDental_Panel_Reconexion.html" class="app-card">
-      <div class="app-icon">👥</div>
-      <div class="app-title">Reconexión Clientes</div>
-      <div class="app-desc">Panel de reconexión de odontólogos y gestión de clientes</div>
-    </a>
-  </div>
+  <div class="access-denied" id="accessDenied">🔒 No tienes permisos para acceder a esa sección. Contacta al administrador.</div>
+  <div class="apps-grid" id="appsGrid"></div>
 
   <div class="footer">
     Isabel La Católica y Madrid, Edf. Isabela Plaza, Almacén 2 · Quito - Ecuador<br>
@@ -106,13 +88,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 
 <script>
-// ═══ CREDENTIALS ═══
-// To add more users, add them to this object: {username: {pass:'...', name:'Display Name'}}
+// ═══ CREDENTIALS & ROLES ═══
+// role: 'admin' = acceso total | 'subadmin' = solo inventario, facturación, reportes
 const USERS = {
-  'admin':    { pass: 'boxdental2026', name: 'Administrador' },
-  'fernando': { pass: 'bxd2026',       name: 'Fernando Sánchez' },
-  'ventas':   { pass: 'ventas2026',    name: 'Ventas BoxDental' }
+  'admin':    { pass: 'boxdental2026', name: 'Administrador',      role: 'admin' },
+  'fernando': { pass: 'bxd2026',       name: 'Fernando Sánchez',   role: 'admin' },
+  'ventas':   { pass: 'ventas2026',    name: 'Ventas BoxDental',   role: 'subadmin' }
 };
+
+// Apps configuration with permissions
+const APPS = [
+  { href:'Planificador_BoxDental.html', icon:'📊', title:'Centro de Control',     desc:'Dashboard, planificador diario y gestión de tareas con seguimiento de progreso', adminOnly:true },
+  { href:'Conteo_Inventario_BoxDental.html', icon:'📦', title:'Inventario',       desc:'Conteo de inventario, control de stock, proveedores y productos con 900+ items', adminOnly:false },
+  { href:'Facturacion_BoxDental.html',  icon:'🧾', title:'Facturación',           desc:'Notas de venta, facturas, cotizaciones, pagos y despachos con rótulos de envío', adminOnly:false },
+  { href:'Reportes_BoxDental.html',     icon:'📈', title:'Reportes',              desc:'Dashboard de ventas, gráficas, compras, inventario y exportación a CSV',         adminOnly:false },
+  { href:'BoxDental_Panel_Reconexion.html', icon:'👥', title:'Reconexión Clientes', desc:'Panel de reconexión de odontólogos y gestión de clientes',                     adminOnly:true },
+];
 
 const SESSION_KEY = 'bxd_session_v1';
 
@@ -134,20 +125,48 @@ function doLogin() {
     return;
   }
 
-  // Save session
-  const session = { user: user, name: u.name, ts: Date.now() };
+  // Save session with role
+  const session = { user: user, name: u.name, role: u.role, ts: Date.now() };
   if (remember) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
-  showApp(u.name);
+  showApp(u.name, u.role);
 }
 
-function showApp(name) {
+function showApp(name, role) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
-  document.getElementById('userLabel').textContent = '👤 ' + name;
+
+  const roleLabel = role === 'admin' ? 'Administrador' : 'Sub-Administrador';
+  const roleBadge = '<span class="role-badge ' + role + '">' + roleLabel + '</span>';
+  document.getElementById('userLabel').innerHTML = '👤 ' + name + roleBadge;
+
+  // Render apps based on role
+  const grid = document.getElementById('appsGrid');
+  grid.innerHTML = APPS.map(app => {
+    const locked = app.adminOnly && role !== 'admin';
+    if (locked) {
+      return '<div class="app-card locked">' +
+        '<div class="app-icon">' + app.icon + '</div>' +
+        '<div class="app-title">' + app.title + '</div>' +
+        '<div class="app-desc">🔒 Solo administradores</div>' +
+      '</div>';
+    }
+    return '<a href="' + app.href + '" class="app-card">' +
+      '<div class="app-icon">' + app.icon + '</div>' +
+      '<div class="app-title">' + app.title + '</div>' +
+      '<div class="app-desc">' + app.desc + '</div>' +
+    '</a>';
+  }).join('');
+
+  // Show access denied message if redirected
+  if (sessionStorage.getItem('bxd_access_denied')) {
+    document.getElementById('accessDenied').style.display = 'block';
+    sessionStorage.removeItem('bxd_access_denied');
+    setTimeout(() => { document.getElementById('accessDenied').style.display = 'none'; }, 5000);
+  }
 }
 
 function doLogout() {
@@ -172,7 +191,7 @@ function checkSession() {
       localStorage.removeItem(SESSION_KEY);
       return false;
     }
-    showApp(s.name);
+    showApp(s.name, s.role);
     return true;
   } catch(e) { return false; }
 }
