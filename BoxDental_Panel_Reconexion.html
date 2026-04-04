@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🦷 BoxDental — Panel Reconexión Odontólogos</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#F0F4F8;min-height:100vh}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a56db,#0e3fa6);color:white;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.header h1{font-size:17px;font-weight:700}
+.header .sub{font-size:12px;opacity:0.8;margin-top:2px}
+.header-btns{display:flex;gap:8px}
+.hbtn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600}
+.hbtn-outline{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.4)}
+.hbtn-outline:hover{background:rgba(255,255,255,0.25)}
+.hbtn-primary{background:white;color:#1a56db}
+.hbtn-primary:hover{background:#EEF2FF}
+.hbtn-green{background:#16a34a;color:white;border:none}
+.hbtn-green:hover{background:#15803d}
+.hbtn-yellow{background:#f59e0b;color:white;border:none;cursor:pointer}
+.hbtn-yellow:hover{background:#d97706}
+.backup-bar{background:#1e3a5f;color:#93c5fd;font-size:11px;padding:5px 20px;text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.backup-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block}
+.backup-dot.warn{background:#fbbf24}
+
+/* STATS */
+.stats{display:flex;gap:0;background:white;border-bottom:1px solid #E5EAF0;overflow-x:auto}
+.stat{flex:1;min-width:90px;padding:12px 8px;text-align:center;border-right:1px solid #E5EAF0}
+.stat:last-child{border-right:none}
+.stat-num{font-size:22px;font-weight:800;color:#1a56db}
+.stat-num.green{color:#16a34a}
+.stat-num.orange{color:#ea580c}
+.stat-num.purple{color:#7c3aed}
+.stat-lbl{font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+
+/* PROGRESS */
+.prog-bar-wrap{background:white;padding:10px 20px;border-bottom:1px solid #E5EAF0}
+.prog-info{display:flex;justify-content:space-between;font-size:11px;color:#6B7280;margin-bottom:5px}
+.prog-track{background:#E5E7EB;border-radius:99px;height:7px;overflow:hidden}
+.prog-fill{background:linear-gradient(90deg,#1a56db,#7c3aed);height:100%;border-radius:99px;transition:width .4s}
+
+/* TABS */
+.tabs{background:white;border-bottom:2px solid #E5EAF0;display:flex;padding:0 16px;gap:2px;overflow-x:auto}
+.tab{padding:11px 16px;font-size:13px;font-weight:600;color:#6B7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .2s}
+.tab:hover{color:#1a56db}
+.tab.active{color:#1a56db;border-bottom-color:#1a56db}
+.tab .cnt{background:#EEF2FF;color:#1a56db;font-size:11px;padding:1px 7px;border-radius:99px;margin-left:5px}
+.tab.active .cnt{background:#1a56db;color:white}
+
+/* FILTERS */
+.filters{background:white;padding:10px 16px;border-bottom:1px solid #E5EAF0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.flbl{font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #E5EAF0;background:white;color:#374151;transition:all .2s}
+.chip:hover{border-color:#1a56db;color:#1a56db}
+.chip.active{background:#1a56db;color:white;border-color:#1a56db}
+.chip.t1.active{background:#dc2626;border-color:#dc2626}
+.chip.t2.active{background:#ea580c;border-color:#ea580c}
+.chip.t3.active{background:#b45309;border-color:#b45309}
+#buscar{margin-left:auto;padding:6px 12px;border:1.5px solid #DCE3EA;border-radius:6px;font-size:13px;min-width:180px;outline:none}
+#buscar:focus{border-color:#1a56db}
+
+/* CARDS */
+.main{padding:16px;max-width:900px;margin:0 auto}
+.cards-list{display:flex;flex-direction:column;gap:10px}
+
+/* TODAY PANEL */
+.today-panel{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:18px;margin-bottom:14px}
+.today-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.today-title{font-size:15px;font-weight:700;color:#1a56db}
+.today-meta{font-size:12px;color:#6B7280}
+.today-items{display:flex;flex-direction:column;gap:6px}
+.today-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:7px;background:#F8FAFC;border:1px solid #E8EFF5;cursor:pointer;transition:all .15s}
+.today-item:hover{background:#EEF2FF;border-color:#C7D7F9}
+.today-item.done{background:#F0FDF4;border-color:#BBF7D0}
+.tnum{font-size:14px;font-weight:700;color:#1a56db;min-width:24px}
+.tinfo{flex:1}
+.tname{font-size:13px;font-weight:700;color:#111827}
+.tsub{font-size:11px;color:#6B7280;margin-top:1px}
+.tcheck{width:24px;height:24px;border-radius:50%;border:2px solid #D1D5DB;display:flex;align-items:center;justify-content:center;font-size:13px;color:white;flex-shrink:0;transition:all .2s}
+.today-item.done .tcheck{background:#16a34a;border-color:#16a34a}
+
+/* CARD */
+.card{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.07);border:1.5px solid #E8EFF5;overflow:hidden;transition:box-shadow .2s}
+.card:hover{box-shadow:0 3px 12px rgba(0,0,0,0.1)}
+.card.expanded{border-color:#C7D7F9;box-shadow:0 3px 12px rgba(26,86,219,0.12)}
+.card.s-respondio{border-left:3px solid #2563eb}
+.card.s-interesado{border-left:3px solid #7c3aed}
+.card.s-pedido{border-left:3px solid #16a34a}
+.card.s-no{border-left:3px solid #dc2626}
+.card.s-contactado{border-left:3px solid #f59e0b}
+.card-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer}
+.ccheck{width:28px;height:28px;border-radius:6px;border:2px solid #DCE3EA;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;transition:all .2s;background:white}
+.ccheck.checked{background:#16a34a;border-color:#16a34a;color:white}
+.cnum{font-size:12px;font-weight:700;color:#9CA3AF;min-width:26px}
+.cinfo{flex:1;min-width:0}
+.cname{font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{display:flex;gap:10px;margin-top:3px;flex-wrap:wrap}
+.cmeta span{font-size:11px;color:#6B7280;display:flex;align-items:center;gap:3px}
+.cmeta a{color:#1a56db;text-decoration:none;font-weight:600}
+.cmeta a:hover{text-decoration:underline}
+.cbadges{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.bt{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.bt1{background:#FEE2E2;color:#dc2626}
+.bt2{background:#FEF3C7;color:#92400e}
+.bt3{background:#FEF9C3;color:#854d0e}
+.bv{background:#DBEAFE;color:#1e40af}
+.bs-sin{background:#F3F4F6;color:#6B7280}
+.bs-contactado{background:#FEF3C7;color:#92400e}
+.bs-respondio{background:#DBEAFE;color:#1e40af}
+.bs-interesado{background:#EDE9FE;color:#5b21b6}
+.bs-pedido{background:#DCFCE7;color:#166534}
+.bs-no{background:#FEE2E2;color:#991b1b}
+.expand-ico{font-size:14px;color:#9CA3AF;transition:transform .2s;flex-shrink:0}
+.card.expanded .expand-ico{transform:rotate(180deg)}
+
+/* CARD BODY */
+.card-body{display:none;padding:0 16px 14px;border-top:1px solid #F3F4F6}
+.card.expanded .card-body{display:block}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.4px}
+.fg select,.fg input{width:100%;padding:7px 10px;border:1.5px solid #DCE3EA;border-radius:6px;font-size:13px;outline:none;font-family:inherit}
+.fg select:focus,.fg input:focus{border-color:#1a56db}
+.notes-wrap{margin-top:10px}
+.notes-wrap label{font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.4px}
+.notes-wrap textarea{width:100%;padding:8px 10px;border:1.5px solid #DCE3EA;border-radius:6px;font-size:13px;resize:vertical;min-height:60px;font-family:inherit;margin-top:4px;outline:none}
+.notes-wrap textarea:focus{border-color:#1a56db}
+
+/* HISTORIAL DE COMENTARIOS */
+.hist-wrap{margin-top:10px;background:#F8FAFC;border:1.5px solid #E5EAF0;border-radius:8px;overflow:hidden}
+.hist-hdr{padding:8px 12px;background:#EEF2FF;font-size:10px;font-weight:700;color:#1a56db;text-transform:uppercase;letter-spacing:.4px;display:flex;justify-content:space-between;align-items:center}
+.hist-hdr span{font-size:10px;color:#6B7280;font-weight:500;text-transform:none}
+.hist-entries{max-height:160px;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.hist-entry{background:white;border:1px solid #E5EAF0;border-radius:6px;padding:7px 10px;font-size:12px;color:#374151}
+.hist-entry .hist-date{font-size:10px;color:#9CA3AF;margin-bottom:2px;font-weight:600}
+.hist-entry .hist-text{line-height:1.4}
+.hist-empty{font-size:12px;color:#9CA3AF;padding:10px 12px;text-align:center;font-style:italic}
+
+/* MODAL VISTA PREVIA */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal-box{background:white;border-radius:12px;max-width:800px;width:100%;padding:28px;position:relative}
+.modal-close{position:absolute;top:14px;right:14px;background:#F3F4F6;border:none;border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#374151}
+.modal-close:hover{background:#E5E7EB}
+.modal-title{font-size:18px;font-weight:800;color:#111827;margin-bottom:4px}
+.modal-sub{font-size:12px;color:#6B7280;margin-bottom:20px}
+.prev-table{width:100%;border-collapse:collapse;font-size:12px}
+.prev-table th{background:#1a56db;color:white;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.prev-table td{padding:8px 10px;border-bottom:1px solid #F3F4F6;vertical-align:top}
+.prev-table tr:nth-child(even) td{background:#F8FAFC}
+.prev-table tr:hover td{background:#EEF2FF}
+.pt-name{font-weight:700;color:#111827}
+.pt-city{font-size:11px;color:#6B7280}
+.prev-print-btn{margin-top:16px;padding:10px 20px;background:#1a56db;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.prev-print-btn:hover{background:#1640a0}
+
+/* PRINT STYLES */
+@media print {
+  .modal-overlay{display:block!important;position:static;background:none;padding:0}
+  .modal-box{box-shadow:none;padding:10px;border-radius:0}
+  .modal-close,.prev-print-btn,.header,.stats,.prog-bar-wrap,.tabs,.filters,.main,.toast{display:none!important}
+  .prev-table th{background:#1a56db!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:white}
+}
+.action-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.abtn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s;text-decoration:none}
+.abtn-wa{background:#25D366;color:white}
+.abtn-wa:hover{background:#1DA851}
+.abtn-call{background:#1a56db;color:white}
+.abtn-call:hover{background:#1640a0}
+.abtn-email{background:#ea580c;color:white}
+.abtn-email:hover{background:#c2410c}
+.abtn-save{background:#16a34a;color:white;margin-left:auto}
+.abtn-save:hover{background:#15803d}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 20px;color:#9CA3AF}
+.empty .ico{font-size:48px;margin-bottom:12px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:#111827;color:white;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:999;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#16a34a}
+
+@media(max-width:600px){
+  .main{padding:10px}
+  .stats{flex-wrap:wrap}
+  .stat{min-width:80px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="Logo de boxdental .png" alt="BoxDental" style="height:38px;border-radius:6px;background:white;padding:2px 6px">
+    <div>
+      <h1>BoxDental — Panel de Reconexión Odontólogos</h1>
+      <div class="sub">184 clientes dormidos · Plan 8 semanas · Actualización automática</div>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button class="hbtn hbtn-outline" onclick="exportarResumen()">📋 Resumen día</button>
+    <button class="hbtn hbtn-outline" onclick="openPreview()">🖨️ Vista previa</button>
+    <button class="hbtn hbtn-green" onclick="exportarDatos()" title="Guardar todos los datos como archivo de respaldo">💾 Exportar datos</button>
+    <label class="hbtn hbtn-yellow" title="Cargar datos desde un archivo de respaldo anterior">📂 Importar datos<input type="file" id="importFile" accept=".json" style="display:none" onchange="importarDatos(this)"></label>
+    <button class="hbtn hbtn-primary" onclick="resetFiltros()">🔄 Ver todos</button>
+  </div>
+</div>
+
+<div class="backup-bar"><span class="backup-dot" id="backupDot"></span><span id="backupLabel">Cargando datos...</span></div>
+<div class="stats">
+  <div class="stat"><div class="stat-num" id="sTotal">184</div><div class="stat-lbl">Total</div></div>
+  <div class="stat"><div class="stat-num" id="sCont">0</div><div class="stat-lbl">Contactados hoy</div></div>
+  <div class="stat"><div class="stat-num green" id="sResp">0</div><div class="stat-lbl">Respondieron</div></div>
+  <div class="stat"><div class="stat-num orange" id="sPed">0</div><div class="stat-lbl">Pedidos</div></div>
+  <div class="stat"><div class="stat-num purple" id="sValor">$0</div><div class="stat-lbl">Recuperado</div></div>
+</div>
+
+<div class="prog-bar-wrap">
+  <div class="prog-info">
+    <span id="progLabel">Progreso del plan: 0 / 184 contactados</span>
+    <span id="progPct">0%</span>
+  </div>
+  <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" id="tab-hoy" onclick="setTab('hoy')">📅 Hoy <span class="cnt" id="cnt-hoy">15</span></div>
+  <div class="tab" id="tab-todos" onclick="setTab('todos')">📋 Todos <span class="cnt" id="cnt-todos">184</span></div>
+  <div class="tab" id="tab-pendientes" onclick="setTab('pendientes')">⏳ Pendientes <span class="cnt" id="cnt-pendientes">—</span></div>
+  <div class="tab" id="tab-respondieron" onclick="setTab('respondieron')">💬 Respondieron <span class="cnt" id="cnt-respondieron">0</span></div>
+  <div class="tab" id="tab-pedidos" onclick="setTab('pedidos')">✅ Pedidos <span class="cnt" id="cnt-pedidos">0</span></div>
+</div>
+
+<div class="filters">
+  <span class="flbl">Tier:</span>
+  <div class="chips">
+    <div class="chip active" id="chip-all" onclick="setTier('all',this)">Todos</div>
+    <div class="chip t1" id="chip-1" onclick="setTier(1,this)">🔴 Tier 1 · Crítico (20)</div>
+    <div class="chip t2" id="chip-2" onclick="setTier(2,this)">🟠 Tier 2 · Importante (60)</div>
+    <div class="chip t3" id="chip-3" onclick="setTier(3,this)">🟡 Tier 3 · Volumen (104)</div>
+  </div>
+  <input type="text" id="buscar" placeholder="🔍 Buscar cliente..." oninput="renderCards()">
+</div>
+
+<div class="main">
+  <div id="todayPanel"></div>
+  <div id="cardsList" class="cards-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL VISTA PREVIA -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePreview()">✕</button>
+    <div class="modal-title">🦷 BoxDental — Seguimiento de Reconexión</div>
+    <div class="modal-sub" id="previewSub"></div>
+    <div id="previewContent"></div>
+    <button class="prev-print-btn" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const CLIENTS = [{"id": 1, "nombre": "VERONICA ELIZABETH NEIRA SANANGO", "ciudad": "Quito", "telefono": "993647542", "email": "", "ventas2025": 4375.9, "facturas": 4, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 2, "nombre": "Clinica Dental CIRUMAX S.A.S", "ciudad": "Quito Norte", "telefono": "992569623", "email": "contabilidad@cirumax.ec", "ventas2025": 2141.46, "facturas": 13, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 3, "nombre": "ODONTOMEDIC CIA LTDA", "ciudad": "Quito", "telefono": "987681360", "email": "odontomedicecuador@hotmail.com", "ventas2025": 1346.67, "facturas": 3, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 4, "nombre": "Nerlin mancilla", "ciudad": "Quito", "telefono": "963820506", "email": "Nerlinmancilla03@gmail.com", "ventas2025": 1127.76, "facturas": 1, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 5, "nombre": "Meditech S.A.", "ciudad": "Guayaquil", "telefono": "+593 98 383 5809", "email": "Meditech_adm@outlook.com", "ventas2025": 1037.31, "facturas": 3, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 6, "nombre": "Ashly De La Torre", "ciudad": "Ibarra", "telefono": "959810537", "email": "", "ventas2025": 1027.18, "facturas": 1, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 7, "nombre": "Mario Alpusig", "ciudad": "Quito", "telefono": "987395024", "email": "mario_alpusig@hotmail.com", "ventas2025": 530.43, "facturas": 14, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 8, "nombre": "Josselyn viviana villavicencio zambrano", "ciudad": "Chone", "telefono": "+593 98 984 3328", "email": "josselynvillavicencio.m20@gmail.com", "ventas2025": 478.03, "facturas": 4, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 9, "nombre": "Bellaexpert Representaciones", "ciudad": "Quito", "telefono": "998125138", "email": "facturasbellaec@gmail.com", "ventas2025": 432.0, "facturas": 2, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 10, "nombre": "Miriam Mencias", "ciudad": "Quito Norte", "telefono": "995755187", "email": "emerson_chin@hotmail.com", "ventas2025": 377.5, "facturas": 3, "tier": 1, "semana": 1, "accion": "Llamada + WhatsApp personal"}, {"id": 11, "nombre": "Nelson Peña Cruz", "ciudad": "Quito", "telefono": "099 805 2457", "email": "nelsonpc2004@yahoo.es", "ventas2025": 350.15, "facturas": 3, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 12, "nombre": "Indira Rossana Araujo Romero", "ciudad": "Machala", "telefono": "+593 98 613 4654", "email": "inross_9@hotmail.com", "ventas2025": 338.26, "facturas": 2, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 13, "nombre": "Pablo Paz", "ciudad": "", "telefono": "", "email": "", "ventas2025": 338.08, "facturas": 3, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 14, "nombre": "Maxident", "ciudad": "Quito", "telefono": "995272733", "email": "maxident.larrea@outlook.com", "ventas2025": 333.75, "facturas": 3, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 15, "nombre": "(Dent Buy)JORGE ISAAC VILLACRES CALLE", "ciudad": "Quito", "telefono": "999038104", "email": "", "ventas2025": 325.0, "facturas": 2, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 16, "nombre": "EDWIN CUENCA YEPEZ", "ciudad": "SANTO DOMINGO", "telefono": "099 825 5905", "email": "slopez@redfarmacy.com", "ventas2025": 309.83, "facturas": 1, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 17, "nombre": "Gonzalez Dental Center", "ciudad": "San Crístobal", "telefono": "996663144", "email": "lgonzalezbczs5@gmail.com", "ventas2025": 290.0, "facturas": 1, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 18, "nombre": "Adriana Batista Pérez", "ciudad": "Cuenca", "telefono": "984154296", "email": "odontologiaclinioral2023@gmail.com", "ventas2025": 290.0, "facturas": 1, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 19, "nombre": "Dr. JORGE ALBERTO SANCHEZ MOREIRA", "ciudad": "lago agrio", "telefono": "982961963", "email": "", "ventas2025": 290.0, "facturas": 1, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 20, "nombre": "Yesenia Marquez Tapia", "ciudad": "", "telefono": "Loja", "email": "", "ventas2025": 289.19, "facturas": 1, "tier": 1, "semana": 2, "accion": "Llamada + WhatsApp personal"}, {"id": 21, "nombre": "Aurimar Saavedra", "ciudad": "Guallabamba", "telefono": "983460635", "email": "", "ventas2025": 283.03, "facturas": 3, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 22, "nombre": "Camila Campaña", "ciudad": "", "telefono": "", "email": "", "ventas2025": 277.95, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 23, "nombre": "Aguirre Jhonatan", "ciudad": "Quito", "telefono": "998075319", "email": "aguirresam593@gmail.com", "ventas2025": 273.22, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 24, "nombre": "JACOME MOLINA KATYA GISELA (Henry Gallardo)", "ciudad": "Quito", "telefono": "998573757", "email": "medidentalmpk@gmail.com", "ventas2025": 264.0, "facturas": 2, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 25, "nombre": "Dayanna Granda Ortiz", "ciudad": "Loja", "telefono": "+593 98 245 9284", "email": "", "ventas2025": 253.13, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 26, "nombre": "Universidad Metropolitana", "ciudad": "Guayaquil", "telefono": "46042956", "email": "ompras@umet.edu.ec", "ventas2025": 237.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 27, "nombre": "MARÍA ARBOLEDA  (Xavier Mestanza)", "ciudad": "Quito", "telefono": "999933243", "email": "", "ventas2025": 231.25, "facturas": 4, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 28, "nombre": "Isabel Herera", "ciudad": "Quito", "telefono": "959252095", "email": "izaherrera261@hotmail.com", "ventas2025": 226.56, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 29, "nombre": "Mikaela Renata Narvaez Alianza", "ciudad": "Quito", "telefono": "+593 99 990 4682", "email": "", "ventas2025": 209.13, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 30, "nombre": "Patricia Medina", "ciudad": "Quito", "telefono": "997266900", "email": "pmagdamed@hotmail.com", "ventas2025": 203.12, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 31, "nombre": "Erik Narváez", "ciudad": "Quito", "telefono": "+593 98 233 0456", "email": "", "ventas2025": 200.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 32, "nombre": "Genaro Guaicla", "ciudad": "Milagros", "telefono": "991245471", "email": "genaroguaicla@gobmci.com", "ventas2025": 189.75, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 33, "nombre": "Clinica Provita Salud y Bienestar", "ciudad": "Ambato", "telefono": "+593 99 565 4459", "email": "provita.contabilidad@gmail.com", "ventas2025": 185.68, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 34, "nombre": "Karen Alexandra Melendres Romero", "ciudad": "Naranjal", "telefono": "+593 99 288 0202", "email": "karito_melendres@hotmail.com", "ventas2025": 185.55, "facturas": 3, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 35, "nombre": "Edmundo Marcelo Aguirre Recalde", "ciudad": "Quito", "telefono": "999848157", "email": "dental.teck@yahoo.com", "ventas2025": 185.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 36, "nombre": "Fritz Watzlaw", "ciudad": "Alemania", "telefono": "496021440700", "email": "", "ventas2025": 179.4, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 37, "nombre": "Melissa Ortiz", "ciudad": "", "telefono": "2415177", "email": "dentaleonsas@gmail.com", "ventas2025": 178.5, "facturas": 4, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 38, "nombre": "DEPOSITO DENTAL ACOSTA", "ciudad": "Quito", "telefono": "993406105", "email": "compras@depositodentalacosta.com", "ventas2025": 175.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 39, "nombre": "Enmanuel Díaz Oms", "ciudad": "Joya de los Sachas", "telefono": "097 914 3742", "email": "", "ventas2025": 173.38, "facturas": 3, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 40, "nombre": "Galo Fray", "ciudad": "Quito", "telefono": "998424940", "email": "galofray@yahoo.es", "ventas2025": 170.41, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 41, "nombre": "MARCOS AUGUSTIN UZCATEGUI CARVAJAL", "ciudad": "quito", "telefono": "995728556", "email": "augustinuz@hotmail.com", "ventas2025": 167.7, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 42, "nombre": "ANDREAS PAUL MARGGRAFF CAMPOS", "ciudad": "Cumbaya", "telefono": "2895652", "email": "", "ventas2025": 161.13, "facturas": 20, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 43, "nombre": "Ale Gavilanes", "ciudad": "", "telefono": "+593 98 353 1996", "email": "alejandragavilanez2001@gmail.com", "ventas2025": 157.98, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 44, "nombre": "Cristian Reinaldo Jerez Faubla", "ciudad": "Salcedo", "telefono": "992732337", "email": "", "ventas2025": 157.38, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 45, "nombre": "Elienai Diaz", "ciudad": "Shushufindi", "telefono": "+593 99 976 1375", "email": "", "ventas2025": 145.49, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 46, "nombre": "Dr Jaime Rivera Davila", "ciudad": "Santo Domingo de los Tsachilas", "telefono": "985002816", "email": "stardental-stodgo@hotmail.com", "ventas2025": 143.22, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 47, "nombre": "Valeria Guevara", "ciudad": "Quito", "telefono": "+593 98 488 7649", "email": "valeriannabel24@gmail.com", "ventas2025": 125.02, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 48, "nombre": "Rosa Alcivar", "ciudad": "Quito", "telefono": "", "email": "", "ventas2025": 125.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 49, "nombre": "Derosa Svierocovich L", "ciudad": "Quito", "telefono": "+593 99 912 2002", "email": "", "ventas2025": 125.0, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 50, "nombre": "Diana Torres Zea", "ciudad": "Guayaquil", "telefono": "989607411", "email": "dianita_t93@hotmail.com", "ventas2025": 119.7, "facturas": 1, "tier": 2, "semana": 3, "accion": "WhatsApp + Email"}, {"id": 51, "nombre": "Lizbeth Paola Morocho villa", "ciudad": "CUENCA", "telefono": "098 254 9067", "email": "", "ventas2025": 115.2, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 52, "nombre": "Jose Manuel Usuay Guerron", "ciudad": "Tumbaco", "telefono": "+593 98 025 9074", "email": "jose_usuay@outlook.com", "ventas2025": 114.14, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 53, "nombre": "Fiorianna Palencia Matarozzo", "ciudad": "Quito", "telefono": "+593 98 609 0191", "email": "", "ventas2025": 113.26, "facturas": 7, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 54, "nombre": "Norma Chamba", "ciudad": "Quito", "telefono": "984018905", "email": "", "ventas2025": 111.68, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 55, "nombre": "SIlvana Ortega", "ciudad": "Quito", "telefono": "3449076", "email": "sieloran@yahoo.es", "ventas2025": 109.8, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 56, "nombre": "JANET RAQUEL VULGARIN FIGUEROA", "ciudad": "Guayaquil", "telefono": "04 2369596", "email": "sumilab@gmail.com", "ventas2025": 102.99, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 57, "nombre": "DISTRIDENTAL S.A", "ciudad": "Guayaquil", "telefono": "2395646", "email": "ventas@distridental.com.ec", "ventas2025": 99.06, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 58, "nombre": "Dispensador Parroquial Maria Auxiliadora", "ciudad": "Quito", "telefono": "2221887", "email": "dispensariomauxiliadora@salesianos.org.ec", "ventas2025": 97.79, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 59, "nombre": "Digna Sanchez Lucero", "ciudad": "Lago Agrio", "telefono": "985940427", "email": "dignasalome@hotmail.com", "ventas2025": 92.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 60, "nombre": "Erika Casa Lasso", "ciudad": "Latacunga", "telefono": "968044588", "email": "erikacasa233@gmail.com", "ventas2025": 89.89, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 61, "nombre": "David Fernández de Córdova Bernal", "ciudad": "Cuenca", "telefono": "987760713", "email": "davidfernandezdecordova@gmail.com", "ventas2025": 87.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 62, "nombre": "Maria Jose Barzallo Cordoba", "ciudad": "Quito", "telefono": "998595060", "email": "", "ventas2025": 85.04, "facturas": 3, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 63, "nombre": "Isis Riquelme", "ciudad": "Quito", "telefono": "984468889", "email": "isisriquelmevizcaino@gmial.com", "ventas2025": 85.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 64, "nombre": "Rafael Carión", "ciudad": "Quito", "telefono": "962051000", "email": "rafael.carrion2001@gmail.com", "ventas2025": 85.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 65, "nombre": "Oswaldo Pulles", "ciudad": "Quito", "telefono": "984021728", "email": "dentooth@hotmail.com", "ventas2025": 82.17, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 66, "nombre": "Alfonso Moreno Naranjo", "ciudad": "Guayaquil", "telefono": "+593 95 894 0136", "email": "od.alfonsomoreno@icloud.com", "ventas2025": 80.75, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 67, "nombre": "BLUEPHARMA S.A.", "ciudad": "GUAYAQUIL", "telefono": "", "email": "contabilidad@bluepharma.com.ec", "ventas2025": 79.67, "facturas": 2, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 68, "nombre": "Martha Nataly Buele Sánchez", "ciudad": "Gualaquiza", "telefono": "939558923", "email": "", "ventas2025": 79.57, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 69, "nombre": "Elizabeth Chicaiza", "ciudad": "Quito", "telefono": "967732132", "email": "imaigna@gmail.com", "ventas2025": 79.49, "facturas": 2, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 70, "nombre": "MAXINSUMO S.A.", "ciudad": "Guayaquil", "telefono": "+593 98 091 2130", "email": "", "ventas2025": 78.2, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 71, "nombre": "Dr. Kevin Ortega Valdez", "ciudad": "Huaquillas", "telefono": "991414715", "email": "", "ventas2025": 77.88, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 72, "nombre": "Yamilex Rivera Moreira", "ciudad": "Cumanda Chimborazo", "telefono": "960535674", "email": "", "ventas2025": 77.8, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 73, "nombre": "Dra. Claudia Arellano", "ciudad": "", "telefono": "996023983", "email": "", "ventas2025": 75.08, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 74, "nombre": "Lia Briguette Montalvo Villamar", "ciudad": "", "telefono": "+593 98 446 1731", "email": "", "ventas2025": 74.25, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 75, "nombre": "Emilia Samantha Samaniego Arichavala", "ciudad": "", "telefono": "+593 97 935 7031", "email": "", "ventas2025": 72.59, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 76, "nombre": "ODONTO-AVANZADA S.A", "ciudad": "GUAYAQUIL", "telefono": "993097098", "email": "compras@odonto-avanzada.com", "ventas2025": 69.75, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 77, "nombre": "CIP Medicos S.A.S", "ciudad": "Quito", "telefono": "+593 99 105 0478", "email": "cipmedicos.sas@gmail.com", "ventas2025": 69.53, "facturas": 2, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 78, "nombre": "Club de Leones Quito Central", "ciudad": "Quito", "telefono": "3983390", "email": "adquisiciones@leonesquitocentral.org", "ventas2025": 69.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 79, "nombre": "CLUB DE LEONES QUITO CENTRAL", "ciudad": "", "telefono": "099 820 5736", "email": "pyandun@cmcquitocentral.org", "ventas2025": 69.0, "facturas": 1, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 80, "nombre": "Empresa PLASTRO", "ciudad": "", "telefono": "+593 98 662 2862", "email": "", "ventas2025": 66.56, "facturas": 2, "tier": 2, "semana": 4, "accion": "WhatsApp + Email"}, {"id": 81, "nombre": "Dra. Tatiana Michelle Zambrano", "ciudad": "Quito", "telefono": "979279841", "email": "tami1zambrano@hotmail.com", "ventas2025": 65.43, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 82, "nombre": "Tatiana Iñeguez", "ciudad": "", "telefono": "", "email": "", "ventas2025": 65.32, "facturas": 9, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 83, "nombre": "Silvia Dreke Hernández", "ciudad": "Quito", "telefono": "999723960", "email": "odonto.sisdental@gmail.com", "ventas2025": 65.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 84, "nombre": "Karla Riera Betancourt", "ciudad": "Quito", "telefono": "+593 99 515 1443", "email": "karly_riera@hotmail.com", "ventas2025": 65.0, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 85, "nombre": "Wilson Loya", "ciudad": "Quito", "telefono": "984042766", "email": "santiagoelectrico@hotmail.com", "ventas2025": 64.19, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 86, "nombre": "Carmen Ramón  Elizalde", "ciudad": "Shushufindi", "telefono": "+593 98 388 9934", "email": "", "ventas2025": 63.34, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 87, "nombre": "ROLDAN INTRIAGO GERMANIA NARCIZA", "ciudad": "Quito", "telefono": "998727081", "email": "germarol@hotmail.com", "ventas2025": 61.9, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 88, "nombre": "Alejandro Aspiazu", "ciudad": "Guayaquil", "telefono": "998503690", "email": "", "ventas2025": 60.4, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 89, "nombre": "Camila Alejandra Barriga", "ciudad": "Quito", "telefono": "+593 98 231 9006", "email": "", "ventas2025": 60.26, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 90, "nombre": "Insumos químicos y alimenticios Proquilim", "ciudad": "Ibarra", "telefono": "62600674", "email": "proquilim.santamonica@gmail.com", "ventas2025": 58.56, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 91, "nombre": "Maria Iza", "ciudad": "Quito", "telefono": "993332277", "email": "distri1800@hotmail.com", "ventas2025": 57.65, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 92, "nombre": "Freddy Santillán Molina", "ciudad": "SANTODOMINGO", "telefono": "+593 99 138 6927", "email": "fs_molina@hotmail.com", "ventas2025": 56.15, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 93, "nombre": "Victor Simbaña", "ciudad": "", "telefono": "998134445", "email": "vs_metalmecanica@hotmail.com", "ventas2025": 54.97, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 94, "nombre": "Michael Alexander Almagro Quishpe", "ciudad": "Latacunga", "telefono": "983389796", "email": "michaelalmagro2h@gmail.com", "ventas2025": 54.43, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 95, "nombre": "Susana Mishell Caluña Cedillo", "ciudad": "Tena", "telefono": "+593 98 602 4874", "email": "", "ventas2025": 52.7, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 96, "nombre": "Stephanie Calle", "ciudad": "Guayaquil", "telefono": "982458526", "email": "", "ventas2025": 51.5, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 97, "nombre": "Alyson Valdivieso", "ciudad": "", "telefono": "+593 99 872 7081", "email": "germarol@hotmail.com", "ventas2025": 49.98, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 98, "nombre": "Simon Yepez", "ciudad": "", "telefono": "+593 98 345 6407", "email": "", "ventas2025": 49.96, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 99, "nombre": "Eliana Beatriz Ortega Sanchez", "ciudad": "Cuenca", "telefono": "", "email": "", "ventas2025": 49.7, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 100, "nombre": "Mauricio Reina", "ciudad": "Quito", "telefono": "968890916", "email": "freina_molina@hotmail.com", "ventas2025": 49.53, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 101, "nombre": "INCIS DENTAL SAS", "ciudad": "Guayaquil", "telefono": "+593 99 409 7179", "email": "incisdental@gmail.com", "ventas2025": 49.5, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 102, "nombre": "Anahi Verenice Buitron Galindo", "ciudad": "Cotacachi", "telefono": "+593 97 912 5462", "email": "", "ventas2025": 49.15, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 103, "nombre": "PATRICIA PILAR SALVATIERRA CALDERON", "ciudad": "Manabi", "telefono": "099 517 5765", "email": "", "ventas2025": 48.5, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 104, "nombre": "Marcelo Chávez", "ciudad": "", "telefono": "+593 98 554 5370", "email": "", "ventas2025": 47.25, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 105, "nombre": "Alan Monge", "ciudad": "Ambato", "telefono": "987808189", "email": "edu_monge@hotmail.com", "ventas2025": 46.36, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 106, "nombre": "Fernando Vinicio Lopez Lopez", "ciudad": "Conocoto", "telefono": "984897861", "email": "fervi1989@hotmail.com", "ventas2025": 46.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 107, "nombre": "Diana Marlene López", "ciudad": "Cuenca", "telefono": "987996165", "email": "dianal88@hotmail.com", "ventas2025": 45.9, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 108, "nombre": "Fernando Arellano Colorado", "ciudad": "LOJA", "telefono": "+593 98 700 9508", "email": "", "ventas2025": 45.25, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 109, "nombre": "Elsa Pillasagua", "ciudad": "Guayaquil", "telefono": "+593 99 318 2180", "email": "vero2804@gmail.com", "ventas2025": 45.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 110, "nombre": "Dra. Aida Perez perez", "ciudad": "Quito", "telefono": "984335644", "email": "aiditaperez64@gmail.com", "ventas2025": 43.93, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 111, "nombre": "Freddy Rodrigo Tapia Salguero", "ciudad": "Quito", "telefono": "958644520", "email": "freddie6519@gmail.com", "ventas2025": 43.69, "facturas": 3, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 112, "nombre": "LABOPREP S.A.S.", "ciudad": "Cuenca", "telefono": "984311595", "email": "luis.alvarado@makolecuador.com", "ventas2025": 43.12, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 113, "nombre": "Ismael Morales", "ciudad": "Quito", "telefono": "963805885", "email": "ismalexande31@gmail.com", "ventas2025": 42.83, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 114, "nombre": "INVERSIONES SULEIMAN & SOTOBERRIO ASOCIADOS S.A.S.", "ciudad": "Quito", "telefono": "+593 98 439 9722", "email": "odontolanduio@gmail.com", "ventas2025": 41.72, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 115, "nombre": "Geovanni Xavier Guevara Guerrero", "ciudad": "Tena", "telefono": "992826862", "email": "xavier-guevara22@hotmail.com", "ventas2025": 41.45, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 116, "nombre": "Medina Cuenca", "ciudad": "Quito", "telefono": "999049361", "email": "jeffer.5jaya@gmail.com", "ventas2025": 41.26, "facturas": 2, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 117, "nombre": "Jessenia Fajardo", "ciudad": "Santo Domingo", "telefono": "", "email": "emyessence.ce.l@outlook.com", "ventas2025": 40.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 118, "nombre": "Nathaly Chavez", "ciudad": "Ibarra", "telefono": "+593 99 747 5329", "email": "", "ventas2025": 39.8, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 119, "nombre": "CHOEZ JIMENEZ ROXANNA LISSETH", "ciudad": "Guayaquil", "telefono": "+593 99 513 4588", "email": "roxannachoez.j@gmail.com", "ventas2025": 39.68, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 120, "nombre": "Micaela Cárdenas", "ciudad": "Loja", "telefono": "+593 99 136 9573", "email": "micaela4c@hotmail.com", "ventas2025": 38.98, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 121, "nombre": "Mary Carmen Barrios Corzo", "ciudad": "Salinas", "telefono": "+593 93 909 4612", "email": "mcbc19@hotmail.com", "ventas2025": 38.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 122, "nombre": "Eimy Alejandra Olalla Sanunga", "ciudad": "Guaranda", "telefono": "+593 99 932 2992", "email": "", "ventas2025": 37.5, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 123, "nombre": "Sole Morales", "ciudad": "", "telefono": "+593 99 852 6001", "email": "solemilia1234morales@gmail.com", "ventas2025": 37.16, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 124, "nombre": "Ivan Morejon", "ciudad": "Quito", "telefono": "987277047", "email": "ivanm7670@hotmail.com", "ventas2025": 37.13, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 125, "nombre": "Sheyla Pamela Lucero Moncayo", "ciudad": "El COCA", "telefono": "+593 99 945 4907", "email": "", "ventas2025": 37.06, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 126, "nombre": "Pillapa Llerena Ronny Isaac", "ciudad": "Pelileo", "telefono": "978691784", "email": "", "ventas2025": 36.06, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 127, "nombre": "Marcelo Aldaz", "ciudad": "Quito", "telefono": "2044166", "email": "marceloaldazbonilla@hotmail.com", "ventas2025": 36.01, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 128, "nombre": "Juan Diego Espinoza Zambrano", "ciudad": "los Ríos", "telefono": "980619078", "email": "diego1996ez@gmail.com", "ventas2025": 36.0, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 129, "nombre": "Luis Miguel Moncayo Morales", "ciudad": "Salinas (Santa Elena) ,", "telefono": "990125530", "email": "", "ventas2025": 34.12, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 130, "nombre": "Laura Freire", "ciudad": "Guayaquil", "telefono": "+593 98 502 2210", "email": "vet.laurafr@gmail.com", "ventas2025": 34.01, "facturas": 1, "tier": 3, "semana": 5, "accion": "Email masivo + WhatsApp"}, {"id": 131, "nombre": "Stefany Carrion Merino", "ciudad": "Loja", "telefono": "+593 96 015 8848", "email": "carrionmerinos@gmail.com", "ventas2025": 32.91, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 132, "nombre": "Nelly Genoveva Flores Ortega", "ciudad": "Quito", "telefono": "983950370", "email": "nelly.flor@gmail.com", "ventas2025": 32.77, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 133, "nombre": "Vitor Xavier Tobar", "ciudad": "Quito", "telefono": "984016579", "email": "tjortoimplant@hotmail.es", "ventas2025": 32.61, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 134, "nombre": "Juan Santos", "ciudad": "Quito", "telefono": "984511420", "email": "juanrasavi5@hotmail.com", "ventas2025": 31.06, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 135, "nombre": "Andres Yupangui", "ciudad": "Quito", "telefono": "+593 95 893 0584", "email": "", "ventas2025": 30.73, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 136, "nombre": "Fredy Alban", "ciudad": "Quito", "telefono": "998858312", "email": "fredyalban1964@gmail.com", "ventas2025": 30.4, "facturas": 3, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 137, "nombre": "Nelson Aimacaña Cayo", "ciudad": "Quito", "telefono": "998117734", "email": "nelsonac553@hotmail.com", "ventas2025": 28.35, "facturas": 2, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 138, "nombre": "Contollab", "ciudad": "Quito", "telefono": "999900197", "email": "mpjb_71@htmail.es", "ventas2025": 27.88, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 139, "nombre": "Jhonatan Bastidas", "ciudad": "Quito", "telefono": "986930923", "email": "jhomlybastidas237@gmail.com", "ventas2025": 27.28, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 140, "nombre": "carolina villavicencio", "ciudad": "quito", "telefono": "982210992", "email": "Karito.alex@hotmail.com", "ventas2025": 25.83, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 141, "nombre": "Juan Felix Diaz Marrero", "ciudad": "", "telefono": "+593 98 434 8812", "email": "", "ventas2025": 25.5, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 142, "nombre": "Maria Elena Guevara", "ciudad": "Quito", "telefono": "+593 99 256 5078", "email": "guevara_import@hotmail.com", "ventas2025": 25.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 143, "nombre": "Marcela Estefania Mejia Andrade", "ciudad": "Quito", "telefono": "967362725", "email": "april7rosa@hotmail.com", "ventas2025": 22.85, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 144, "nombre": "MERCATTI-ESTHETIC", "ciudad": "GUAYAQUIL", "telefono": "+593 99 201 5563", "email": "facturacion.estetico@gmail.com", "ventas2025": 21.9, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 145, "nombre": "Doménica Rossmeri López Muñoz", "ciudad": "Guayaquil", "telefono": "963236874", "email": "domenicarossmery@outlook.com", "ventas2025": 21.75, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 146, "nombre": "Doris Rubí", "ciudad": "Quito", "telefono": "995853682", "email": "rubisuntaxi@gmail.com", "ventas2025": 21.75, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 147, "nombre": "Anastasiia Shapovalova", "ciudad": "Quito", "telefono": "+593 98 792 0835", "email": "nastewie@gmail.com", "ventas2025": 21.52, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 148, "nombre": "Walter Ocaña", "ciudad": "", "telefono": "984185075", "email": "", "ventas2025": 21.5, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 149, "nombre": "Gabriela vallejos", "ciudad": "Quito", "telefono": "992089790", "email": "", "ventas2025": 21.17, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 150, "nombre": "Lissette Carolina Balladares Solo?rzano", "ciudad": "Guayaquil", "telefono": "+593 98 681 4781", "email": "lissetteballadares9@gmail.com", "ventas2025": 21.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 151, "nombre": "KFERMEDI S.A.S", "ciudad": "Quito", "telefono": "984648436", "email": "kfermedisas@gmail.com", "ventas2025": 19.35, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 152, "nombre": "Andrea Silva", "ciudad": "Quito", "telefono": "998722033", "email": "ferand812@gmail.com", "ventas2025": 19.3, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 153, "nombre": "ORDOÑEZ LEON SARITA BIBIANA", "ciudad": "Quito", "telefono": "993481803", "email": "saritab12@hotmail.es", "ventas2025": 18.72, "facturas": 2, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 154, "nombre": "Dra. Valeria Ramos", "ciudad": "Quito Norte", "telefono": "987958484", "email": "valeri0899@hotmail.com", "ventas2025": 18.59, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 155, "nombre": "Loor Naranjo Evelyn Mayerly", "ciudad": "Rio Verde (Esmeraldas)", "telefono": "960853938", "email": "evelynloor509@gmail.com", "ventas2025": 17.4, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 156, "nombre": "Teresa Quishpe", "ciudad": "Quito", "telefono": "995107924", "email": "mpg_kmd@yahoo.es", "ventas2025": 17.35, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 157, "nombre": "Ivonne Ricaurte", "ciudad": "Cumbayá", "telefono": "995655510", "email": "ivonnericaurte83@hotmail.com", "ventas2025": 16.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 158, "nombre": "Corporación Aída Montoya e Hijas Cía Ltda", "ciudad": "Quito", "telefono": "2810804", "email": "compras@ism.edu.ec", "ventas2025": 15.5, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 159, "nombre": "Jhon Steeven Tigre Tuarez", "ciudad": "MACHALA", "telefono": "+593 99 094 2782", "email": "", "ventas2025": 15.28, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 160, "nombre": "Nancy Saraguro Riofrio", "ciudad": "Loja", "telefono": "+593 99 198 2620", "email": "cynan111@hotmail.com", "ventas2025": 15.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 161, "nombre": "Edison Samaniego", "ciudad": "Riobamba", "telefono": "984404349", "email": "edidariosamaniego@gmail.com", "ventas2025": 14.94, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 162, "nombre": "Clinica Medicvalle Cia LTDA", "ciudad": "Quito", "telefono": "2861849", "email": "admisiones@medicvalle.com", "ventas2025": 14.0, "facturas": 2, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 163, "nombre": "Universidad Politecnica Salesiana", "ciudad": "Guayaquil", "telefono": "999910018", "email": "aibarrav@ups.edu.ec", "ventas2025": 13.8, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 164, "nombre": "Gabriela Alexandra Bautista Reinoso", "ciudad": "Latacunga", "telefono": "987417107", "email": "", "ventas2025": 13.6, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 165, "nombre": "Mayra Vega", "ciudad": "Quito", "telefono": "", "email": "maca9123@hotmail.com", "ventas2025": 12.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 166, "nombre": "Diego Castillo", "ciudad": "Quito", "telefono": "+593 99 797 0501", "email": "diegocastillofa@gmail.com", "ventas2025": 11.9, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 167, "nombre": "stiven alexander aldas ortiz", "ciudad": "Sushufindi", "telefono": "+593 99 665 9978", "email": "", "ventas2025": 11.25, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 168, "nombre": "GALINDO GONZALEZ ANNIE PAOLA", "ciudad": "Quito", "telefono": "988412981", "email": "", "ventas2025": 11.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 169, "nombre": "Paola Freire", "ciudad": "Quito", "telefono": "987652033", "email": "secretariadresfreire@hotmail.com", "ventas2025": 10.5, "facturas": 2, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 170, "nombre": "Hamilton Andrade Murillo", "ciudad": "QUEVEDO", "telefono": "+593 96 083 5280", "email": "", "ventas2025": 9.5, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 171, "nombre": "fabricio erazo", "ciudad": "quito", "telefono": "984031818", "email": "fabricioerazo1@gmail.com", "ventas2025": 9.45, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 172, "nombre": "Nayzeth Vera Drouet", "ciudad": "BABAHYO", "telefono": "+593 99 458 2118", "email": "", "ventas2025": 8.8, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 173, "nombre": "Santiago Del Valle", "ciudad": "Quito", "telefono": "995014913", "email": "santiagodv83@hotmail.com", "ventas2025": 7.72, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 174, "nombre": "Adonis Lopez", "ciudad": "Quito", "telefono": "961977005", "email": "forcemontacargas@gmail.com", "ventas2025": 7.48, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 175, "nombre": "CHANGOLUISA JACOME WENDY VANESSA", "ciudad": "Qutio", "telefono": "995006140", "email": "facturawendy@gmail.com", "ventas2025": 7.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 176, "nombre": "Renny Maestre", "ciudad": "Quito", "telefono": "996900649", "email": "rennymaestre@yahoo.com", "ventas2025": 7.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 177, "nombre": "Miguel Quilumbango", "ciudad": "Quito", "telefono": "998407520", "email": "miguelquilumbango@gmail.com", "ventas2025": 6.37, "facturas": 2, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 178, "nombre": "Mónica Vilatuña", "ciudad": "Quito", "telefono": "+593 99 188 7632", "email": "", "ventas2025": 6.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 179, "nombre": "Jairo Ortega", "ciudad": "Quito", "telefono": "+593 99 455 9545", "email": "jairo_ortega19@hotmail.com", "ventas2025": 6.0, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 180, "nombre": "VALDIVIESO UVIDIA LUIS GUILLERMO", "ciudad": "Quito", "telefono": "998727081", "email": "", "ventas2025": 5.58, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 181, "nombre": "Rubén Jaya", "ciudad": "Quito", "telefono": "987601462", "email": "bladijaya@gmail.com", "ventas2025": 5.29, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 182, "nombre": "María Toapanta", "ciudad": "Quito", "telefono": "+593 98 431 7245", "email": "m.toapanta1990@gmail.com", "ventas2025": 4.62, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 183, "nombre": "Pablo Enriquez", "ciudad": "Quito", "telefono": "999939787", "email": "pablo.enriquez@hotmail.com", "ventas2025": 3.45, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}, {"id": 184, "nombre": "Alex Ramirez", "ciudad": "Quito", "telefono": "999353898", "email": "silver70_5@hotmail.com", "ventas2025": 2.35, "facturas": 1, "tier": 3, "semana": 6, "accion": "Email masivo + WhatsApp"}];
+
+// ============================================================
+// STATE
+// ============================================================
+const KEY = 'bd_crm_v3';
+let state = {};
+let curTab = 'hoy';
+let curTier = 'all';
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+  CLIENTS.forEach(c => {
+    if (!state[c.id]) state[c.id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[]};
+  });
+}
+
+function saveState() {
+  localStorage.setItem(KEY, JSON.stringify(state));
+  const now = new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  localStorage.setItem(KEY+'_lastSave', now);
+  updateStats();
+  updateBackupBar();
+}
+
+function updateBackupBar() {
+  const dot = document.getElementById('backupDot');
+  const lbl = document.getElementById('backupLabel');
+  if (!dot || !lbl) return;
+  const lastExport = localStorage.getItem(KEY+'_lastExport');
+  const lastSave   = localStorage.getItem(KEY+'_lastSave');
+  if (lastExport) {
+    dot.className = 'backup-dot';
+    lbl.textContent = '✅ Backup exportado: ' + lastExport + (lastSave ? '  |  Auto-guardado en navegador: ' + lastSave : '');
+  } else {
+    dot.className = 'backup-dot warn';
+    lbl.textContent = '⚠️ Sin backup guardado — presiona 💾 Exportar datos para guardar una copia segura' + (lastSave ? '  |  Auto-guardado: ' + lastSave : '');
+  }
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const all = Object.values(state);
+  const cont = all.filter(s => s.status !== 'sin_contactar').length;
+  const resp = all.filter(s => ['respondio','interesado','pedido'].includes(s.status)).length;
+  const ped = all.filter(s => s.status === 'pedido').length;
+  const valor = all.reduce((a,s) => a + (parseFloat(s.valor)||0), 0);
+  const pct = Math.round(cont/184*100);
+
+  document.getElementById('sCont').textContent = cont;
+  document.getElementById('sResp').textContent = resp;
+  document.getElementById('sPed').textContent = ped;
+  document.getElementById('sValor').textContent = '$' + valor.toFixed(0);
+  document.getElementById('progLabel').textContent = 'Progreso del plan: ' + cont + ' / 184 contactados';
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progFill').style.width = pct + '%';
+
+  const pendientes = all.filter(s => s.status === 'sin_contactar').length;
+  document.getElementById('cnt-pendientes').textContent = pendientes;
+  document.getElementById('cnt-respondieron').textContent = resp;
+  document.getElementById('cnt-pedidos').textContent = ped;
+}
+
+// ============================================================
+// FILTERS / TABS
+// ============================================================
+function setTab(tab) {
+  curTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  renderCards();
+}
+
+function setTier(tier, el) {
+  curTier = tier;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderCards();
+}
+
+function resetFiltros() {
+  curTab = 'todos';
+  curTier = 'all';
+  document.getElementById('buscar').value = '';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-todos').classList.add('active');
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('chip-all').classList.add('active');
+  renderCards();
+}
+
+function getFiltered() {
+  const q = (document.getElementById('buscar').value || '').toLowerCase();
+  return CLIENTS.filter(c => {
+    const s = state[c.id] || {};
+    if (curTier !== 'all' && c.tier !== curTier) return false;
+    if (q && !c.nombre.toLowerCase().includes(q) && !c.ciudad.toLowerCase().includes(q)) return false;
+    if (curTab === 'hoy') return c.semana === 1 && c.id <= 15;
+    if (curTab === 'pendientes') return s.status === 'sin_contactar';
+    if (curTab === 'respondieron') return ['respondio','interesado','pedido'].includes(s.status);
+    if (curTab === 'pedidos') return s.status === 'pedido';
+    return true;
+  });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function statusLabel(st) {
+  const map = {
+    'sin_contactar': ['bs-sin','Sin contactar'],
+    'contactado': ['bs-contactado','Contactado'],
+    'respondio': ['bs-respondio','Respondió'],
+    'interesado': ['bs-interesado','Interesado'],
+    'pedido': ['bs-pedido','⭐ Pedido'],
+    'no_contesta': ['bs-no','No contesta']
+  };
+  return map[st] || ['bs-sin', st];
+}
+
+function tierBadge(t) {
+  if (t===1) return '<span class="bt bt1">🔴 T1</span>';
+  if (t===2) return '<span class="bt bt2">🟠 T2</span>';
+  return '<span class="bt bt3">🟡 T3</span>';
+}
+
+function phoneClean(p) {
+  return (p||'').replace(/[^0-9+]/g,'');
+}
+
+function renderToday(clients) {
+  if (curTab !== 'hoy') { document.getElementById('todayPanel').innerHTML=''; return; }
+  const today = CLIENTS.filter(c => c.semana === 1 && c.id <= 15);
+  const done = today.filter(c => (state[c.id]||{}).status !== 'sin_contactar').length;
+  
+  let rows = today.map((c,i) => {
+    const s = state[c.id] || {};
+    const isDone = s.status !== 'sin_contactar';
+    const phone = phoneClean(c.telefono);
+    return `<div class="today-item ${isDone?'done':''}" id="ti-${c.id}" onclick="toggleCard(${c.id})">
+      <div class="tnum">${i+1}</div>
+      <div class="tinfo">
+        <div class="tname">${c.nombre}</div>
+        <div class="tsub">${c.ciudad||'—'} · ${c.telefono||'Sin tel.'} · ${c.accion}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${phone ? `<a href="https://wa.me/593${phone.replace(/^0/,'').replace(/^\+593/,'')}" target="_blank" onclick="event.stopPropagation()" style="font-size:18px;text-decoration:none">💬</a>` : ''}
+        ${phone ? `<a href="tel:${phone}" onclick="event.stopPropagation()" style="font-size:18px;text-decoration:none">📞</a>` : ''}
+      </div>
+      <div class="tcheck">${isDone?'✓':''}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('todayPanel').innerHTML = `
+    <div class="today-panel">
+      <div class="today-hdr">
+        <div class="today-title">📅 Agenda de hoy — Semana 1 (Tier 1 Crítico)</div>
+        <div class="today-meta">${done} / 15 completados</div>
+      </div>
+      <div class="today-items">${rows}</div>
+    </div>`;
+}
+
+function renderCards() {
+  const filtered = getFiltered();
+  const container = document.getElementById('cardsList');
+  
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty"><div class="ico">🔍</div><div>No hay clientes con estos filtros</div></div>';
+    renderToday();
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const s = state[c.id] || {};
+    const [scls, slbl] = statusLabel(s.status||'sin_contactar');
+    const phone = phoneClean(c.telefono);
+    const waNum = phone ? phone.replace(/^0/,'').replace(/^\+593/,'') : '';
+    const isExpanded = s._expanded ? 'expanded' : '';
+    const isChecked = s.status !== 'sin_contactar' ? 'checked' : '';
+
+    return `<div class="card ${isExpanded} s-${(s.status||'sin_contactar').replace('_','-')}" id="card-${c.id}">
+      <div class="card-head" onclick="toggleCard(${c.id})">
+        <div class="ccheck ${isChecked}" onclick="quickCheck(event,${c.id})">${isChecked?'✓':''}</div>
+        <div class="cnum">#${c.id}</div>
+        <div class="cinfo">
+          <div class="cname">${c.nombre}</div>
+          <div class="cmeta">
+            <span>📍 ${c.ciudad||'—'}</span>
+            ${phone ? `<span>📞 <a href="tel:${phone}" onclick="event.stopPropagation()">${c.telefono}</a></span>` : ''}
+            ${c.email ? `<span>✉️ <a href="mailto:${c.email}" onclick="event.stopPropagation()">${c.email}</a></span>` : ''}
+          </div>
+        </div>
+        <div class="cbadges">
+          ${tierBadge(c.tier)}
+          <span class="bt bv">💰 $${c.ventas2025.toFixed(0)}</span>
+          <span class="bt ${scls}">${slbl}</span>
+        </div>
+        <div class="expand-ico">▼</div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="fg">
+            <label>Estado</label>
+            <select id="st-${c.id}" onchange="updateField(${c.id},'status',this.value)">
+              <option value="sin_contactar" ${(s.status||'sin_contactar')==='sin_contactar'?'selected':''}>⬜ Sin contactar</option>
+              <option value="contactado" ${s.status==='contactado'?'selected':''}>📤 Contactado</option>
+              <option value="respondio" ${s.status==='respondio'?'selected':''}>💬 Respondió</option>
+              <option value="interesado" ${s.status==='interesado'?'selected':''}>🤔 Interesado</option>
+              <option value="pedido" ${s.status==='pedido'?'selected':''}>⭐ Hizo pedido</option>
+              <option value="no_contesta" ${s.status==='no_contesta'?'selected':''}>❌ No contesta</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Método de contacto</label>
+            <select id="mt-${c.id}" onchange="updateField(${c.id},'metodo',this.value)">
+              <option value="" ${!s.metodo?'selected':''}>— Seleccionar —</option>
+              <option value="whatsapp" ${s.metodo==='whatsapp'?'selected':''}>💬 WhatsApp</option>
+              <option value="llamada" ${s.metodo==='llamada'?'selected':''}>📞 Llamada telefónica</option>
+              <option value="email" ${s.metodo==='email'?'selected':''}>✉️ Email</option>
+              <option value="whatsapp+llamada" ${s.metodo==='whatsapp+llamada'?'selected':''}>💬+📞 WhatsApp + Llamada</option>
+              <option value="visita" ${s.metodo==='visita'?'selected':''}>🚗 Visita personal</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Valor pedido ($)</label>
+            <input type="number" id="vl-${c.id}" placeholder="0.00" value="${s.valor||''}" onchange="updateField(${c.id},'valor',this.value)" oninput="updateField(${c.id},'valor',this.value)">
+          </div>
+          <div class="fg">
+            <label>📅 Fecha primer contacto</label>
+            <input type="date" id="pc-${c.id}" value="${s.primerContacto||''}" onchange="updateField(${c.id},'primerContacto',this.value)" title="Fecha en que se contactó por primera vez">
+          </div>
+        </div>
+        <div class="notes-wrap">
+          <label>💬 Nuevo comentario</label>
+          <textarea id="nt-${c.id}" placeholder="Escribe aquí lo que conversaron, qué productos necesitan, cuándo volver a llamar... (se guarda con fecha al presionar Guardar)" onchange="updateField(${c.id},'notas',this.value)" oninput="updateField(${c.id},'notas',this.value)">${s.notas||''}</textarea>
+        </div>
+        <div class="hist-wrap">
+          <div class="hist-hdr">📋 Historial de seguimiento <span>${(s.historial||[]).length} registro(s)</span></div>
+          <div class="hist-entries" id="hist-${c.id}">
+            ${(s.historial||[]).length === 0
+              ? '<div class="hist-empty">Aún no hay registros guardados</div>'
+              : [...(s.historial||[])].reverse().map(h => `<div class="hist-entry"><div class="hist-date">🗓 ${h.fecha} — ${h.metodo||'—'} — Estado: ${h.status||'—'}</div><div class="hist-text">${h.texto||'(sin comentario)'}</div></div>`).join('')
+            }
+          </div>
+        </div>
+        <div class="action-btns">
+          ${waNum ? `<a class="abtn abtn-wa" href="https://wa.me/593${waNum}?text=Hola%20Dr%2FDra%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20le%20saluda%20Fercho%20de%20BoxDental." target="_blank" onclick="markContacted(${c.id},'whatsapp')">💬 WhatsApp</a>` : ''}
+          ${phone ? `<a class="abtn abtn-call" href="tel:${phone}" onclick="markContacted(${c.id},'llamada')">📞 Llamar</a>` : ''}
+          ${c.email ? `<a class="abtn abtn-email" href="mailto:${c.email}?subject=BoxDental%20-%20Novedades%20exclusivas%20para%20usted&body=Estimado%2Fa%20Dr%2FDra%20${encodeURIComponent(c.nombre)}%2C%0A%0AEspero%20que%20se%20encuentre%20muy%20bien.%20Le%20escribe%20Fernando%20de%20BoxDental." onclick="markContacted(${c.id},'email')">✉️ Email</a>` : ''}
+          <button class="abtn abtn-save" onclick="guardarCard(${c.id})">💾 Guardar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderToday();
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function toggleCard(id) {
+  if (!state[id]) state[id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[],_expanded:false};
+  state[id]._expanded = !state[id]._expanded;
+  saveState();
+  renderCards();
+}
+
+function quickCheck(e, id) {
+  e.stopPropagation();
+  if (!state[id]) state[id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[]};
+  if (state[id].status === 'sin_contactar') {
+    state[id].status = 'contactado';
+    state[id].fecha = new Date().toLocaleDateString('es-EC');
+    if (!state[id].primerContacto) state[id].primerContacto = new Date().toISOString().split('T')[0];
+  } else {
+    state[id].status = 'sin_contactar';
+  }
+  saveState();
+  renderCards();
+  toast(state[id].status !== 'sin_contactar' ? '✓ Marcado como contactado' : 'Desmarcado', state[id].status !== 'sin_contactar');
+}
+
+function updateField(id, field, value) {
+  if (!state[id]) state[id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[]};
+  state[id][field] = value;
+  if (field === 'status' && value !== 'sin_contactar' && !state[id].fecha) {
+    state[id].fecha = new Date().toLocaleDateString('es-EC');
+  }
+  if (field === 'status' && value !== 'sin_contactar' && !state[id].primerContacto) {
+    state[id].primerContacto = new Date().toISOString().split('T')[0];
+    const pcEl = document.getElementById('pc-'+id);
+    if (pcEl) pcEl.value = state[id].primerContacto;
+  }
+  saveState();
+  // Update card classes without full re-render
+  const card = document.getElementById('card-'+id);
+  if (card) {
+    card.className = card.className.replace(/s-[a-z_-]+/g, '').trim() + ' s-' + (value||'sin_contactar').replace('_','-');
+    const badges = card.querySelector('.cbadges');
+    if (badges) {
+      const [scls, slbl] = statusLabel(value||'sin_contactar');
+      const statusBadge = badges.querySelector('.bt.bs-sin, .bt.bs-contactado, .bt.bs-respondio, .bt.bs-interesado, .bt.bs-pedido, .bt.bs-no');
+      if (statusBadge) { statusBadge.className = 'bt ' + scls; statusBadge.textContent = slbl; }
+    }
+    const chk = card.querySelector('.ccheck');
+    if (chk) {
+      if (value !== 'sin_contactar') { chk.classList.add('checked'); chk.textContent = '✓'; }
+      else { chk.classList.remove('checked'); chk.textContent = ''; }
+    }
+  }
+  updateStats();
+}
+
+function markContacted(id, metodo) {
+  if (!state[id]) state[id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',fecha:'',primerContacto:'',historial:[]};
+  if (state[id].status === 'sin_contactar') {
+    state[id].status = 'contactado';
+    state[id].fecha = new Date().toLocaleDateString('es-EC');
+    if (!state[id].primerContacto) state[id].primerContacto = new Date().toISOString().split('T')[0];
+  }
+  state[id].metodo = metodo;
+  // Update selects
+  const stEl = document.getElementById('st-'+id);
+  const mtEl = document.getElementById('mt-'+id);
+  if (stEl) stEl.value = state[id].status;
+  if (mtEl) mtEl.value = metodo;
+  saveState();
+  updateStats();
+}
+
+function guardarCard(id) {
+  const stEl = document.getElementById('st-'+id);
+  const mtEl = document.getElementById('mt-'+id);
+  const vlEl = document.getElementById('vl-'+id);
+  const ntEl = document.getElementById('nt-'+id);
+  const pcEl = document.getElementById('pc-'+id);
+  if (!state[id]) state[id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',fecha:'',primerContacto:'',historial:[]};
+  if (!state[id].historial) state[id].historial = [];
+  if (stEl) state[id].status = stEl.value;
+  if (mtEl) state[id].metodo = mtEl.value;
+  if (vlEl) state[id].valor = vlEl.value;
+  if (pcEl && pcEl.value) state[id].primerContacto = pcEl.value;
+  const comentario = ntEl ? ntEl.value.trim() : '';
+  if (comentario) {
+    const ahora = new Date();
+    const fechaHora = ahora.toLocaleDateString('es-EC') + ' ' + ahora.toLocaleTimeString('es-EC', {hour:'2-digit',minute:'2-digit'});
+    state[id].historial.push({
+      fecha: fechaHora,
+      texto: comentario,
+      status: state[id].status,
+      metodo: state[id].metodo
+    });
+    state[id].notas = '';
+    if (ntEl) ntEl.value = '';
+  }
+  if (state[id].status !== 'sin_contactar' && !state[id].fecha) {
+    state[id].fecha = new Date().toLocaleDateString('es-EC');
+  }
+  if (state[id].status !== 'sin_contactar' && !state[id].primerContacto) {
+    state[id].primerContacto = new Date().toISOString().split('T')[0];
+  }
+  saveState();
+  renderCards();
+  toast('✅ Guardado correctamente', true);
+}
+
+// ============================================================
+// BACKUP EXPORT / IMPORT
+// ============================================================
+function exportarDatos() {
+  const hoy = new Date();
+  const fechaArchivo = hoy.toLocaleDateString('es-EC').replace(/\//g,'-');
+  const horaArchivo  = hoy.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const backup = { version: 2, fecha: hoy.toISOString(), state: state };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'BoxDental_Datos_' + fechaArchivo + '_' + horaArchivo + '.json';
+  a.click();
+  const etiqueta = hoy.toLocaleDateString('es-EC') + ' ' + hoy.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  localStorage.setItem(KEY+'_lastExport', etiqueta);
+  updateBackupBar();
+  toast('💾 Datos exportados correctamente', true);
+}
+
+function importarDatos(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (backup.state) {
+        state = backup.state;
+        // Asegurar que todos los clientes existen en el estado
+        CLIENTS.forEach(c => {
+          if (!state[c.id]) state[c.id] = {status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[]};
+          if (!state[c.id].historial) state[c.id].historial = [];
+        });
+        saveState();
+        renderCards();
+        toast('✅ Datos importados correctamente (' + (backup.fecha ? new Date(backup.fecha).toLocaleDateString('es-EC') : 'fecha desconocida') + ')', true);
+      } else {
+        toast('❌ Archivo no válido', false);
+      }
+    } catch(err) {
+      toast('❌ Error al leer el archivo: ' + err.message, false);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportarResumen() {
+  const hoy = new Date().toLocaleDateString('es-EC');
+  let txt = `RESUMEN DEL DÍA - BoxDental - ${hoy}\n`;
+  txt += `=====================================\n\n`;
+  
+  const contactados = CLIENTS.filter(c => state[c.id] && state[c.id].status !== 'sin_contactar');
+  txt += `CONTACTADOS HOY: ${contactados.length}\n\n`;
+  
+  contactados.forEach(c => {
+    const s = state[c.id];
+    txt += `▸ ${c.nombre} (${c.ciudad})\n`;
+    txt += `  Estado: ${s.status} | Método: ${s.metodo||'—'} | Valor: $${s.valor||'0'}\n`;
+    if (s.notas) txt += `  Notas: ${s.notas}\n`;
+    txt += '\n';
+  });
+  
+  const pendientes = CLIENTS.filter(c => !state[c.id] || state[c.id].status === 'sin_contactar').length;
+  txt += `\nPENDIENTES: ${pendientes} | PEDIDOS: ${CLIENTS.filter(c => state[c.id] && state[c.id].status==='pedido').length}`;
+  
+  const blob = new Blob([txt], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `BoxDental_Resumen_${hoy.replace(/\//g,'-')}.txt`;
+  a.click();
+  toast('📋 Resumen exportado', true);
+}
+
+// ============================================================
+// VISTA PREVIA / PRINT
+// ============================================================
+function openPreview() {
+  const hoy = new Date().toLocaleDateString('es-EC', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('previewSub').textContent = `Generado el ${hoy} — Total clientes: ${CLIENTS.length}`;
+
+  const statusLabels = {sin_contactar:'Sin contactar',contactado:'Contactado',respondio:'Respondió',interesado:'Interesado',pedido:'Hizo pedido',no_contesta:'No contesta'};
+  const rows = CLIENTS.map(c => {
+    const s = state[c.id] || {};
+    const st = s.status || 'sin_contactar';
+    const stLbl = statusLabels[st] || st;
+    const stColor = {sin_contactar:'#6B7280',contactado:'#92400e',respondio:'#1e40af',interesado:'#5b21b6',pedido:'#166534',no_contesta:'#991b1b'}[st] || '#374151';
+    const ult = (s.historial||[]).length > 0 ? s.historial[s.historial.length-1] : null;
+    const primerContactoFmt = s.primerContacto ? new Date(s.primerContacto+'T00:00:00').toLocaleDateString('es-EC') : '—';
+    return `<tr>
+      <td><div class="pt-name">${c.nombre}</div><div class="pt-city">📍 ${c.ciudad||'—'}</div></td>
+      <td>${c.telefono||'—'}</td>
+      <td><span style="color:${stColor};font-weight:700">${stLbl}</span></td>
+      <td>${primerContactoFmt}</td>
+      <td>${s.metodo||'—'}</td>
+      <td>${s.valor ? '$'+parseFloat(s.valor).toFixed(2) : '—'}</td>
+      <td style="max-width:180px;font-size:11px">${ult ? `<strong>${ult.fecha}</strong><br>${ult.texto}` : (s.notas||'—')}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('previewContent').innerHTML = `
+    <table class="prev-table">
+      <thead>
+        <tr>
+          <th>Odontólogo / Clínica</th>
+          <th>Teléfono</th>
+          <th>Estado</th>
+          <th>Primer contacto</th>
+          <th>Método</th>
+          <th>Valor</th>
+          <th>Último comentario</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+}
+
+// Cerrar modal con Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, ok=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (ok?' ok':'');
+  setTimeout(() => { t.className = 'toast' + (ok?' ok':''); }, 2500);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+updateStats();
+renderCards();
+updateBackupBar();
+
+// Aviso al cerrar si no hay backup reciente
+window.addEventListener('beforeunload', function(e) {
+  const lastExport = localStorage.getItem(KEY+'_lastExport');
+  const contactados = CLIENTS.filter(c => state[c.id] && state[c.id].status !== 'sin_contactar').length;
+  if (contactados > 0 && !lastExport) {
+    e.preventDefault();
+    e.returnValue = '¿Seguro que deseas cerrar? No has exportado los datos. Presiona 💾 Exportar datos primero.';
+    return e.returnValue;
+  }
+});
+</script>
+</body>
+</html>
