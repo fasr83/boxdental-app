@@ -356,6 +356,56 @@ td{padding:8px 12px;vertical-align:middle}
 .doc-header-info{font-size:11px;color:#64748b;line-height:1.5}
 .doc-header-info strong{font-size:14px;color:#1a56db;display:block}
 
+/* ── COTIZACIÓN RÁPIDA ── */
+.cq-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
+.cq-overlay.open{display:flex}
+.cq-modal{background:#fff;border-radius:16px;width:100%;max-width:960px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.35);animation:cqIn .2s ease}
+@keyframes cqIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.cq-hdr{padding:18px 24px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between}
+.cq-hdr h2{font-size:1.15rem;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px}
+.cq-x{width:32px;height:32px;border-radius:50%;border:none;background:#F1F5F9;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#64748B;transition:all .12s}
+.cq-x:hover{background:#FEE2E2;color:#EF4444}
+.cq-body{padding:20px 24px}
+.cq-step{display:none}.cq-step.active{display:block}
+.cq-dropzone{border:2.5px dashed #CBD5E1;border-radius:14px;padding:50px 30px;text-align:center;cursor:pointer;transition:all .2s;background:#F8FAFC}
+.cq-dropzone:hover,.cq-dropzone.dragover{border-color:#1E40AF;background:#EEF2FF}
+.cq-dropzone .dz-icon{font-size:3rem;margin-bottom:10px}
+.cq-dropzone .dz-text{font-size:.95rem;color:#64748B;font-weight:500}
+.cq-dropzone .dz-text strong{color:#1E40AF;cursor:pointer}
+.cq-dropzone .dz-formats{font-size:.75rem;color:#94A3B8;margin-top:8px}
+.cq-file-info{display:flex;align-items:center;gap:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 14px;margin-top:12px}
+.cq-file-info .fi-icon{font-size:1.5rem}.cq-file-info .fi-name{font-weight:700;font-size:.88rem;color:#166534}
+.cq-spinner{text-align:center;padding:30px;color:#1E40AF;font-weight:600}
+.cq-spinner .spin{display:inline-block;width:28px;height:28px;border:3px solid #E2E8F0;border-top-color:#1E40AF;border-radius:50%;animation:cqSpin .7s linear infinite;margin-bottom:8px}
+@keyframes cqSpin{to{transform:rotate(360deg)}}
+.cq-stats{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.cq-stat{padding:6px 14px;border-radius:8px;font-size:.8rem;font-weight:700}
+.cq-stat-ok{background:#D1FAE5;color:#065F46}.cq-stat-warn{background:#FEF3C7;color:#92400E}.cq-stat-err{background:#FEE2E2;color:#991B1B}
+.cq-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.cq-table th{background:#F8FAFC;padding:8px 10px;text-align:left;font-size:.72rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid #E2E8F0;position:sticky;top:0}
+.cq-table td{padding:8px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.cq-table tr:hover{background:#F8FAFC}
+.cq-table tr.rejected{opacity:.35}
+.cq-table tr.rejected td{text-decoration:line-through}
+.cq-orig{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748B;font-size:.78rem}
+.cq-match-name{font-weight:600;color:#1E293B}
+.cq-match-cat{font-size:.68rem;color:#1E40AF;background:#EEF2FF;padding:1px 6px;border-radius:4px;margin-left:4px}
+.cq-conf{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:6px;text-align:center}
+.cq-conf.high{background:#D1FAE5;color:#065F46}.cq-conf.med{background:#FEF3C7;color:#92400E}.cq-conf.low{background:#FEE2E2;color:#991B1B}
+.cq-input{width:65px;padding:4px 6px;border:1px solid #CBD5E1;border-radius:6px;font-size:.82rem;text-align:center}
+.cq-acts button{padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.78rem;font-weight:600;transition:all .1s}
+.cq-btn-ok{background:#D1FAE5;color:#065F46}.cq-btn-ok:hover{background:#10B981;color:#fff}
+.cq-btn-no{background:#FEE2E2;color:#991B1B}.cq-btn-no:hover{background:#EF4444;color:#fff}
+.cq-btn-search{background:#EEF2FF;color:#1E40AF}.cq-btn-search:hover{background:#1E40AF;color:#fff}
+.cq-foot{padding:14px 24px;border-top:1px solid #E2E8F0;display:flex;gap:10px;justify-content:space-between;align-items:center}
+.cq-foot-left{display:flex;gap:8px}
+.cq-no-match{color:#EF4444;font-style:italic;font-size:.8rem}
+.cq-alt-list{position:absolute;background:#fff;border:1px solid #E2E8F0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:4px;z-index:10;max-height:200px;overflow-y:auto;min-width:280px}
+.cq-alt-item{padding:6px 10px;border-radius:6px;cursor:pointer;font-size:.8rem;transition:background .1s}
+.cq-alt-item:hover{background:#EEF2FF}
+.cq-alt-item .score{float:right;font-size:.7rem;color:#94A3B8}
+.cq-warn{background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#92400E;margin-top:12px}
+
 </style>
 <script src="auth-guard.js"></script>
 </head>
@@ -515,6 +565,9 @@ td{padding:8px 12px;vertical-align:middle}
       <span class="search-ico">🔍</span>
       <input type="text" id="prodSearch" placeholder="Buscar producto por nombre..." autocomplete="off">
       <div class="search-results" id="searchResults"></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff;font-weight:700;border:none;padding:8px 16px;border-radius:10px;cursor:pointer;font-size:.85rem;box-shadow:0 3px 10px rgba(245,158,11,.3);transition:all .15s" onclick="openCotRapida()">⚡ Cotización Rápida <span style="font-size:.7rem;opacity:.8;margin-left:4px">PDF · Excel · Word</span></button>
     </div>
   </div>
 
@@ -818,7 +871,72 @@ td{padding:8px 12px;vertical-align:middle}
 </div>
 </div>
 
+<!-- ═══ COTIZACIÓN RÁPIDA MODAL ═══ -->
+<div class="cq-overlay" id="cqOverlay">
+<div class="cq-modal">
+  <div class="cq-hdr">
+    <h2>⚡ Cotización Rápida</h2>
+    <button class="cq-x" onclick="closeCotRapida()">✕</button>
+  </div>
+  <div class="cq-body">
+    <!-- STEP 1: Upload -->
+    <div class="cq-step active" id="cqStep1">
+      <div class="cq-dropzone" id="cqDropzone">
+        <div class="dz-icon">📄</div>
+        <div class="dz-text">Arrastra tu archivo aquí o <strong onclick="document.getElementById('cqFileInput').click()">selecciona un archivo</strong></div>
+        <div class="dz-formats">Formatos aceptados: PDF, Excel (.xlsx, .xls, .csv), Word (.docx)</div>
+        <input type="file" id="cqFileInput" accept=".pdf,.xlsx,.xls,.csv,.docx" style="display:none">
+      </div>
+      <div class="cq-file-info" id="cqFileInfo" style="display:none">
+        <span class="fi-icon" id="cqFileIcon">📄</span>
+        <span class="fi-name" id="cqFileName">archivo.pdf</span>
+      </div>
+      <div class="cq-spinner" id="cqSpinner" style="display:none">
+        <div class="spin"></div><br>Analizando archivo y buscando productos...
+      </div>
+      <div class="cq-warn" id="cqWarn" style="display:none"></div>
+    </div>
+
+    <!-- STEP 2: Review matches -->
+    <div class="cq-step" id="cqStep2">
+      <div class="cq-stats" id="cqStats"></div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="cq-btn-ok" onclick="cqToggleAll(true)" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:.78rem">✅ Aceptar Todos</button>
+        <button class="cq-btn-no" onclick="cqToggleAll(false)" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:.78rem">❌ Rechazar Todos</button>
+      </div>
+      <div style="overflow-x:auto;max-height:50vh;overflow-y:auto;border:1px solid #E2E8F0;border-radius:10px">
+        <table class="cq-table">
+          <thead><tr>
+            <th style="width:25%">Texto Original</th>
+            <th style="width:30%">Producto Encontrado</th>
+            <th style="width:10%">Confianza</th>
+            <th style="width:8%">Cant.</th>
+            <th style="width:12%">P. Unit</th>
+            <th style="width:15%">Acción</th>
+          </tr></thead>
+          <tbody id="cqMatchBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="cq-foot">
+    <div class="cq-foot-left">
+      <button class="btn" style="background:#F1F5F9;color:#64748B;border:1px solid #CBD5E1;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem" onclick="closeCotRapida()">Cancelar</button>
+      <button class="btn" style="background:#EEF2FF;color:#1E40AF;border:1px solid #C7D2FE;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;display:none" id="cqBackBtn" onclick="cqBack()">← Volver</button>
+    </div>
+    <button class="btn" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;padding:10px 22px;border-radius:10px;cursor:pointer;font-weight:700;font-size:.9rem;box-shadow:0 3px 12px rgba(16,185,129,.3);display:none" id="cqApplyBtn" onclick="cqApply()">✅ Agregar <span id="cqApplyCount">0</span> productos a la cotización</button>
+  </div>
+</div>
+</div>
+
 <div class="toast" id="toast"></div>
+
+<!-- CDN Libraries for Cotización Rápida -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
 <script>
 
@@ -1460,6 +1578,539 @@ function renderAbonosEnModal(factNum) {
   }
   container.innerHTML = html;
 }
+
+
+// ══════════════════════════════════════════════════════════
+// ── COTIZACIÓN RÁPIDA ─────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+let cqMatches = [];
+let cqFuseIndex = null;
+
+function buildFuseIndex() {
+  if (cqFuseIndex) return cqFuseIndex;
+  const prods = getAllProds().map(p => ({
+    ...p,
+    nombreNorm: normCQ(getNombre(p.id)),
+    nombre: getNombre(p.id)
+  }));
+  cqFuseIndex = new Fuse(prods, {
+    keys: [
+      { name: 'nombreNorm', weight: 0.7 },
+      { name: 'nombre', weight: 0.3 }
+    ],
+    threshold: 0.45,
+    distance: 300,
+    includeScore: true,
+    minMatchCharLength: 3
+  });
+  return cqFuseIndex;
+}
+
+function normCQ(s) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ── Open / Close modal
+function openCotRapida() {
+  cqMatches = [];
+  document.getElementById('cqStep1').classList.add('active');
+  document.getElementById('cqStep2').classList.remove('active');
+  document.getElementById('cqFileInfo').style.display = 'none';
+  document.getElementById('cqSpinner').style.display = 'none';
+  document.getElementById('cqWarn').style.display = 'none';
+  document.getElementById('cqBackBtn').style.display = 'none';
+  document.getElementById('cqApplyBtn').style.display = 'none';
+  document.getElementById('cqFileInput').value = '';
+  document.getElementById('cqOverlay').classList.add('open');
+}
+
+function closeCotRapida() {
+  document.getElementById('cqOverlay').classList.remove('open');
+}
+
+function cqBack() {
+  document.getElementById('cqStep2').classList.remove('active');
+  document.getElementById('cqStep1').classList.add('active');
+  document.getElementById('cqBackBtn').style.display = 'none';
+  document.getElementById('cqApplyBtn').style.display = 'none';
+}
+
+// ── Drag & Drop
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const dz = document.getElementById('cqDropzone');
+    if (!dz) return;
+    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+    dz.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file) cqProcessFile(file);
+    });
+    dz.addEventListener('click', e => {
+      if (e.target.tagName !== 'STRONG') document.getElementById('cqFileInput').click();
+    });
+    document.getElementById('cqFileInput').addEventListener('change', function() {
+      if (this.files[0]) cqProcessFile(this.files[0]);
+    });
+  });
+})();
+
+// ── File processing dispatcher
+async function cqProcessFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const validExts = ['pdf','xlsx','xls','csv','docx'];
+  if (!validExts.includes(ext)) {
+    showToast('⚠️ Formato no soportado. Usa PDF, Excel o Word','err');
+    return;
+  }
+
+  // Show file info
+  const icons = {pdf:'📕', xlsx:'📗', xls:'📗', csv:'📊', docx:'📘'};
+  document.getElementById('cqFileIcon').textContent = icons[ext] || '📄';
+  document.getElementById('cqFileName').textContent = file.name;
+  document.getElementById('cqFileInfo').style.display = 'flex';
+  document.getElementById('cqSpinner').style.display = 'block';
+  document.getElementById('cqWarn').style.display = 'none';
+
+  try {
+    let lines = [];
+    const buf = await file.arrayBuffer();
+
+    if (ext === 'pdf') {
+      lines = await cqParsePDF(buf);
+    } else if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+      lines = cqParseExcel(buf, ext);
+    } else if (ext === 'docx') {
+      lines = await cqParseWord(buf);
+    }
+
+    // Filter empty/short lines
+    lines = lines.filter(l => l.trim().length >= 3);
+
+    if (lines.length === 0) {
+      document.getElementById('cqSpinner').style.display = 'none';
+      document.getElementById('cqWarn').style.display = 'block';
+      document.getElementById('cqWarn').innerHTML = '⚠️ No se pudo extraer texto del archivo. Si es un PDF escaneado (imagen), intenta con un archivo Excel o Word.';
+      return;
+    }
+
+    // Match lines against products
+    cqMatchLines(lines);
+    document.getElementById('cqSpinner').style.display = 'none';
+    cqShowStep2();
+
+  } catch(err) {
+    document.getElementById('cqSpinner').style.display = 'none';
+    document.getElementById('cqWarn').style.display = 'block';
+    document.getElementById('cqWarn').innerHTML = '❌ Error al leer el archivo: ' + escH(err.message);
+    console.error('CQ Error:', err);
+  }
+}
+
+// ── PDF Parser
+async function cqParsePDF(buf) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('Librería PDF no disponible. Recarga la página.');
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const lines = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let lastY = null;
+    let currentLine = '';
+    content.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      if (lastY !== null && Math.abs(y - lastY) > 3) {
+        if (currentLine.trim()) lines.push(currentLine.trim());
+        currentLine = '';
+      }
+      currentLine += item.str + ' ';
+      lastY = y;
+    });
+    if (currentLine.trim()) lines.push(currentLine.trim());
+  }
+  return lines;
+}
+
+// ── Excel/CSV Parser
+function cqParseExcel(buf, ext) {
+  if (typeof XLSX === 'undefined') throw new Error('Librería Excel no disponible. Recarga la página.');
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  if (data.length === 0) return [];
+
+  const lines = [];
+  // Try to detect which column has product names (longest text) and which has quantities
+  let nameCol = 0, qtyCol = -1;
+
+  // Check first few rows to find patterns
+  if (data[0] && data[0].length > 1) {
+    // Find column with longest strings (product names)
+    let maxLen = 0;
+    for (let c = 0; c < data[0].length; c++) {
+      let totalLen = 0;
+      for (let r = 0; r < Math.min(data.length, 10); r++) {
+        totalLen += String(data[r][c] || '').length;
+      }
+      if (totalLen > maxLen) { maxLen = totalLen; nameCol = c; }
+    }
+    // Find numeric column closest to name column (quantity)
+    for (let c = 0; c < data[0].length; c++) {
+      if (c === nameCol) continue;
+      let numCount = 0;
+      for (let r = 1; r < Math.min(data.length, 10); r++) {
+        if (!isNaN(parseFloat(data[r][c])) && String(data[r][c]).trim() !== '') numCount++;
+      }
+      if (numCount >= Math.min(data.length - 1, 5)) { qtyCol = c; break; }
+    }
+  }
+
+  // Skip header row if first row looks like headers
+  const startRow = (isNaN(parseFloat(data[0][qtyCol >= 0 ? qtyCol : 0])) && String(data[0][nameCol]).length < 50) ? 1 : 0;
+
+  for (let r = startRow; r < data.length; r++) {
+    const name = String(data[r][nameCol] || '').trim();
+    if (!name || name.length < 3) continue;
+    const qty = qtyCol >= 0 ? parseFloat(data[r][qtyCol]) : NaN;
+    if (!isNaN(qty) && qty > 0) {
+      lines.push(Math.round(qty) + ' x ' + name);
+    } else {
+      lines.push(name);
+    }
+  }
+  return lines;
+}
+
+// ── Word Parser
+async function cqParseWord(buf) {
+  if (typeof mammoth === 'undefined') throw new Error('Librería Word no disponible. Recarga la página.');
+  const result = await mammoth.extractRawText({arrayBuffer: buf});
+  return result.value.split('\n').filter(l => l.trim());
+}
+
+// ── Match lines against product DB
+function cqMatchLines(lines) {
+  const fuse = buildFuseIndex();
+  cqMatches = [];
+
+  lines.forEach((line, idx) => {
+    // Try to extract quantity
+    let qty = 1;
+    let productText = line;
+
+    // Patterns: "5 x Producto", "5 - Producto", "5 unid Producto"
+    const qtyPatterns = [
+      /^(\d+)\s*[xX×\-]\s*(.+)/,
+      /^(\d+)\s*(unid|pcs|und|cajas?|paq|sobres?|tubos?|frascos?|blister|rollo)\s+(.+)/i,
+      /(.+?)\s+[xX×]\s*(\d+)\s*$/,
+      /(.+?)\s+(\d+)\s*(unid|pcs|und)?\s*$/
+    ];
+
+    for (const pat of qtyPatterns) {
+      const m = line.match(pat);
+      if (m) {
+        if (pat === qtyPatterns[0] || pat === qtyPatterns[1]) {
+          qty = parseInt(m[1]) || 1;
+          productText = m[pat === qtyPatterns[1] ? 3 : 2];
+        } else {
+          qty = parseInt(m[2]) || 1;
+          productText = m[1];
+        }
+        break;
+      }
+    }
+
+    // Clean product text
+    productText = productText.replace(/^\d+[\.\)\-]\s*/, '').trim(); // Remove "1. " or "1) " numbering
+
+    // Fuzzy search
+    const normalized = normCQ(productText);
+    if (normalized.length < 3) return;
+
+    const results = fuse.search(normalized, {limit: 5});
+
+    const match = {
+      idx: idx,
+      original: line,
+      productText: productText,
+      qty: qty,
+      accepted: false,
+      matchedProduct: null,
+      score: 1,
+      confidence: 0,
+      alternatives: [],
+      customPrice: null
+    };
+
+    if (results.length > 0) {
+      const best = results[0];
+      match.matchedProduct = best.item;
+      match.score = best.score;
+      match.confidence = Math.round((1 - best.score) * 100);
+      match.accepted = match.confidence >= 50; // Auto-accept if >=50% confidence
+      match.alternatives = results.slice(1, 5).map(r => ({
+        product: r.item,
+        confidence: Math.round((1 - r.score) * 100)
+      }));
+    }
+
+    cqMatches.push(match);
+  });
+}
+
+// ── Show Step 2 with results
+function cqShowStep2() {
+  document.getElementById('cqStep1').classList.remove('active');
+  document.getElementById('cqStep2').classList.add('active');
+  document.getElementById('cqBackBtn').style.display = 'inline-block';
+  document.getElementById('cqApplyBtn').style.display = 'inline-flex';
+  cqRenderMatches();
+}
+
+function cqRenderMatches() {
+  const body = document.getElementById('cqMatchBody');
+  const accepted = cqMatches.filter(m => m.accepted).length;
+  const noMatch = cqMatches.filter(m => !m.matchedProduct).length;
+  const total = cqMatches.length;
+
+  // Stats
+  document.getElementById('cqStats').innerHTML =
+    '<span class="cq-stat cq-stat-ok">✅ ' + accepted + ' aceptados</span>' +
+    '<span class="cq-stat cq-stat-warn">📋 ' + total + ' líneas detectadas</span>' +
+    (noMatch > 0 ? '<span class="cq-stat cq-stat-err">❌ ' + noMatch + ' sin coincidencia</span>' : '');
+
+  // Apply button count
+  document.getElementById('cqApplyCount').textContent = accepted;
+
+  // Table
+  body.innerHTML = cqMatches.map((m, i) => {
+    const rowClass = m.accepted ? '' : 'rejected';
+    const prod = m.matchedProduct;
+
+    let matchCell = '';
+    if (prod) {
+      matchCell = '<span class="cq-match-name">' + escH(prod.nombre) + '</span>' +
+        '<span class="cq-match-cat">' + escH(prod.categoria) + '</span>';
+    } else {
+      matchCell = '<span class="cq-no-match">Sin coincidencia</span>';
+    }
+
+    const confClass = m.confidence >= 75 ? 'high' : m.confidence >= 50 ? 'med' : 'low';
+    const confCell = prod ? '<span class="cq-conf ' + confClass + '">' + m.confidence + '%</span>' : '-';
+
+    const precio = m.customPrice != null ? m.customPrice : (prod ? getPrecio(prod.id) : 0);
+
+    return '<tr class="' + rowClass + '" id="cqRow' + i + '">' +
+      '<td class="cq-orig" title="' + escH(m.original) + '">' + escH(m.original) + '</td>' +
+      '<td>' + matchCell + '</td>' +
+      '<td style="text-align:center">' + confCell + '</td>' +
+      '<td><input type="number" class="cq-input" value="' + m.qty + '" min="1" onchange="cqSetQty(' + i + ',this.value)" ' + (prod ? '' : 'disabled') + '></td>' +
+      '<td><input type="number" class="cq-input" value="' + precio.toFixed(2) + '" min="0" step="0.01" onchange="cqSetPrice(' + i + ',this.value)" ' + (prod ? '' : 'disabled') + '></td>' +
+      '<td class="cq-acts" style="position:relative">' +
+        (prod && m.accepted ? '<button class="cq-btn-no" onclick="cqToggle(' + i + ',false)">✕ Quitar</button>' : '') +
+        (prod && !m.accepted ? '<button class="cq-btn-ok" onclick="cqToggle(' + i + ',true)">✓ Agregar</button>' : '') +
+        (m.alternatives.length > 0 ? ' <button class="cq-btn-search" onclick="cqShowAlts(' + i + ')">🔄</button>' : '') +
+        (!prod ? ' <button class="cq-btn-search" onclick="cqManualSearch(' + i + ')">🔍 Buscar</button>' : '') +
+      '</td></tr>';
+  }).join('');
+}
+
+// ── Actions
+function cqToggle(idx, accept) {
+  cqMatches[idx].accepted = accept;
+  cqRenderMatches();
+}
+
+function cqToggleAll(accept) {
+  cqMatches.forEach(m => { if (m.matchedProduct) m.accepted = accept; });
+  cqRenderMatches();
+}
+
+function cqSetQty(idx, val) {
+  cqMatches[idx].qty = Math.max(1, parseInt(val) || 1);
+}
+
+function cqSetPrice(idx, val) {
+  cqMatches[idx].customPrice = Math.max(0, parseFloat(val) || 0);
+}
+
+// ── Show alternatives
+function cqShowAlts(idx) {
+  // Close any existing
+  document.querySelectorAll('.cq-alt-list').forEach(el => el.remove());
+
+  const m = cqMatches[idx];
+  const cell = document.querySelector('#cqRow' + idx + ' .cq-acts');
+  const div = document.createElement('div');
+  div.className = 'cq-alt-list';
+
+  let html = '<div style="padding:6px 10px;font-size:.72rem;font-weight:700;color:#64748B;border-bottom:1px solid #E2E8F0">Alternativas:</div>';
+
+  // Current match as first option
+  if (m.matchedProduct) {
+    html += '<div class="cq-alt-item" style="background:#EEF2FF;font-weight:600" onclick="cqPickAlt(' + idx + ',-1)">' +
+      escH(m.matchedProduct.nombre) + ' <span class="score">' + m.confidence + '%</span></div>';
+  }
+
+  m.alternatives.forEach((alt, ai) => {
+    html += '<div class="cq-alt-item" onclick="cqPickAlt(' + idx + ',' + ai + ')">' +
+      escH(alt.product.nombre) + ' <span class="score">' + alt.confidence + '%</span></div>';
+  });
+
+  html += '<div class="cq-alt-item" style="color:#1E40AF;font-weight:600" onclick="cqManualSearch(' + idx + ')">🔍 Buscar manualmente...</div>';
+
+  div.innerHTML = html;
+  cell.appendChild(div);
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function handler(e) {
+      if (!e.target.closest('.cq-alt-list') && !e.target.closest('.cq-btn-search')) {
+        div.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 50);
+}
+
+function cqPickAlt(idx, altIdx) {
+  const m = cqMatches[idx];
+  if (altIdx === -1) return; // Already selected
+  const alt = m.alternatives[altIdx];
+  // Swap current with alternative
+  const oldProd = m.matchedProduct;
+  const oldConf = m.confidence;
+  m.matchedProduct = alt.product;
+  m.confidence = alt.confidence;
+  m.score = 1 - (alt.confidence / 100);
+  m.accepted = true;
+  m.customPrice = null;
+  // Move old to alternatives
+  if (oldProd) {
+    m.alternatives[altIdx] = { product: oldProd, confidence: oldConf };
+  } else {
+    m.alternatives.splice(altIdx, 1);
+  }
+  document.querySelectorAll('.cq-alt-list').forEach(el => el.remove());
+  cqRenderMatches();
+}
+
+// ── Manual search for unmatched lines
+function cqManualSearch(idx) {
+  document.querySelectorAll('.cq-alt-list').forEach(el => el.remove());
+
+  const m = cqMatches[idx];
+  const cell = document.querySelector('#cqRow' + idx + ' .cq-acts');
+  const div = document.createElement('div');
+  div.className = 'cq-alt-list';
+  div.style.minWidth = '320px';
+
+  div.innerHTML = '<div style="padding:8px 10px"><input type="text" placeholder="Buscar producto..." ' +
+    'style="width:100%;padding:6px 10px;border:1.5px solid #CBD5E1;border-radius:6px;font-size:.85rem" ' +
+    'id="cqManualInput' + idx + '" oninput="cqDoManualSearch(' + idx + ',this.value)"></div>' +
+    '<div id="cqManualResults' + idx + '" style="max-height:200px;overflow-y:auto"></div>';
+
+  cell.appendChild(div);
+  setTimeout(() => document.getElementById('cqManualInput' + idx).focus(), 50);
+
+  // Pre-fill with original text
+  document.getElementById('cqManualInput' + idx).value = m.productText.substring(0, 30);
+  cqDoManualSearch(idx, m.productText.substring(0, 30));
+
+  setTimeout(() => {
+    document.addEventListener('click', function handler(e) {
+      if (!e.target.closest('.cq-alt-list')) {
+        div.remove();
+        document.removeEventListener('click', handler);
+      }
+    });
+  }, 50);
+}
+
+function cqDoManualSearch(idx, query) {
+  const container = document.getElementById('cqManualResults' + idx);
+  if (!container) return;
+  if (query.trim().length < 2) { container.innerHTML = ''; return; }
+
+  const fuse = buildFuseIndex();
+  const results = fuse.search(normCQ(query), {limit: 8});
+
+  container.innerHTML = results.map((r, ri) => {
+    const conf = Math.round((1 - r.score) * 100);
+    return '<div class="cq-alt-item" onclick="cqPickManual(' + idx + ',' + r.item.id + ',' + conf + ')">' +
+      '<div style="font-weight:600">' + escH(r.item.nombre) + '</div>' +
+      '<div style="font-size:.7rem;color:#64748B">' + escH(r.item.categoria) + ' · $' + getPrecio(r.item.id).toFixed(2) + ' <span class="score">' + conf + '%</span></div>' +
+    '</div>';
+  }).join('');
+
+  if (results.length === 0) {
+    container.innerHTML = '<div style="padding:10px;text-align:center;color:#94A3B8;font-size:.82rem">Sin resultados</div>';
+  }
+}
+
+function cqPickManual(idx, prodId, confidence) {
+  const prod = getAllProds().find(p => p.id === prodId);
+  if (!prod) return;
+  const m = cqMatches[idx];
+  m.matchedProduct = { ...prod, nombre: getNombre(prod.id) };
+  m.confidence = confidence;
+  m.score = 1 - (confidence / 100);
+  m.accepted = true;
+  m.customPrice = null;
+  m.alternatives = [];
+  document.querySelectorAll('.cq-alt-list').forEach(el => el.remove());
+  cqRenderMatches();
+}
+
+// ── Apply to invoice
+function cqApply() {
+  const accepted = cqMatches.filter(m => m.accepted && m.matchedProduct);
+  if (accepted.length === 0) {
+    showToast('⚠️ No hay productos aceptados para agregar','err');
+    return;
+  }
+
+  // Switch to Cotización document type
+  if (typeof setDocType === 'function') setDocType('cotizacion');
+
+  // Add each product
+  accepted.forEach(m => {
+    const prod = m.matchedProduct;
+    // Check if already in currentItems
+    const existIdx = currentItems.findIndex(it => it.id === prod.id);
+    if (existIdx >= 0) {
+      // Add quantity to existing
+      currentItems[existIdx].qty += m.qty;
+      currentItems[existIdx].total = currentItems[existIdx].qty * currentItems[existIdx].precioUnit;
+    } else {
+      const precio = m.customPrice != null ? m.customPrice : getPrecio(prod.id);
+      currentItems.push({
+        id: prod.id,
+        nombre: prod.nombre,
+        categoria: prod.categoria,
+        qty: m.qty,
+        precioUnit: precio,
+        total: m.qty * precio
+      });
+    }
+  });
+
+  renderItems();
+  recalcTotals();
+  closeCotRapida();
+  showToast('✅ ' + accepted.length + ' productos agregados a la cotización','ok');
+}
+
+// Close on overlay click
+document.addEventListener('DOMContentLoaded', function() {
+  const ov = document.getElementById('cqOverlay');
+  if (ov) ov.addEventListener('click', function(e) { if (e.target === this) closeCotRapida(); });
+});
 
 
 // ── INIT ────────────────────────────────────────────────
