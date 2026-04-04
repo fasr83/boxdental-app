@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "boxdental",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["http-server", "/Users/elfercho/Desktop/ROBUR/boxdental-app", "-p", "8090", "-c-1"],
+      "port": 8090
+    }
+  ]
+}
