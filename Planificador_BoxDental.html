@@ -898,7 +898,8 @@ function buildExtra(){
 
 function openModal(task){
   editId=task?task.id:null;
-  selType=task?task.type:'general';
+  // If filtering by category, pre-select that category for new tasks
+  selType=task?task.type:(filter!=='all'?filter:'general');
   document.getElementById('mdlTitle').textContent=task?'Editar Tarea':'Nueva Tarea';
   document.getElementById('fTitle').value=task?task.title:'';
   document.getElementById('fDate').value=task?task.date:selDate;
@@ -973,12 +974,18 @@ function saveTask(){
     calView=new Date(date+'T12:00:00');
   }
 
+  // If current filter doesn't match the task's type, switch to 'all' so user can see it
+  if(filter!=='all' && filter!==selType){
+    filter='all';
+  }
+
+  const wasEdit=!!editId;
   save();
   closeModal();
   const pg=document.querySelector('.page.active').id;
   if(pg==='pg-dashboard') renderDash();
   else renderPlanner();
-  toast(editId?'✏️ Tarea actualizada':'✅ Tarea guardada','ok');
+  toast(wasEdit?'✏️ Tarea actualizada':'✅ Tarea guardada','ok');
   editId=null;
 }
 
