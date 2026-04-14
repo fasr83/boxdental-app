@@ -157,6 +157,10 @@ td{padding:8px 12px;vertical-align:middle}
 .inv-li-date{font-size:11px;color:var(--muted)}
 .inv-li-items{font-size:11px;color:var(--muted)}
 .inv-li-actions{display:flex;gap:6px;margin-left:12px}
+#histSearch:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.hist-filter-btn{padding:6px 12px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;color:var(--text)}
+.hist-filter-btn:hover{border-color:var(--pri);color:var(--pri)}
+.hist-filter-btn.sel{background:var(--pri);color:#fff;border-color:var(--pri)}
 
 /* OVERLAY / MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
@@ -170,14 +174,42 @@ td{padding:8px 12px;vertical-align:middle}
 
 /* PRINT STYLES */
 @media print{
-  .hdr,.actions-section,.inv-list-section,.hdr-right,.no-print{display:none!important}
-  body{background:#fff}
-  .main{margin:0;padding:0;max-width:100%}
-  .inv-card{box-shadow:none;border:1px solid #ddd}
-  .search-row,.prod-section,.client-saved{display:none!important}
-  .totals-row.total{background:#059669!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .inv-header{background:#f8fafc!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body>*{display:none!important}
+  #printArea{display:block!important;position:absolute;top:0;left:0;width:100%;background:#fff}
+  body{background:#fff;margin:0;padding:0}
 }
+/* Print invoice styles */
+.print-invoice{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;padding:20px;max-width:800px;margin:0 auto}
+.print-invoice *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pi-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #1a56db;margin-bottom:20px}
+.pi-logo-area{display:flex;align-items:center;gap:14px}
+.pi-logo-area img{height:55px;border-radius:8px}
+.pi-company{font-size:11px;color:#555;line-height:1.6}
+.pi-company h2{font-size:18px;font-weight:800;color:#1a56db;margin:0 0 4px}
+.pi-doc-info{text-align:right}
+.pi-doc-num{font-size:22px;font-weight:800;color:#1a56db;margin-bottom:4px}
+.pi-doc-type{font-size:11px;font-weight:700;color:#fff;background:#1a56db;padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:6px}
+.pi-doc-date{font-size:12px;color:#666}
+.pi-client{background:#f7f9fc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:20px}
+.pi-client-title{font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:.06em;margin-bottom:8px}
+.pi-client-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.pi-client-detail{font-size:12px;color:#555;line-height:1.6}
+.pi-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px}
+.pi-table thead th{background:#f1f5f9;padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.04em;border-bottom:2px solid #e2e8f0}
+.pi-table thead th.r{text-align:right}
+.pi-table thead th.c{text-align:center}
+.pi-table tbody td{padding:8px 10px;border-bottom:1px solid #f1f5f9}
+.pi-table tbody td.r{text-align:right}
+.pi-table tbody td.c{text-align:center}
+.pi-table tbody tr:nth-child(even){background:#fafbfc}
+.pi-totals{display:flex;justify-content:flex-end}
+.pi-totals-box{min-width:260px}
+.pi-totals-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f1f5f9}
+.pi-totals-row.discount{color:#dc2626}
+.pi-totals-row.grand{padding:10px 0;font-size:18px;font-weight:800;color:#059669;border-top:2px solid #059669;border-bottom:none;margin-top:4px}
+.pi-payment{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-top:16px;font-size:12px}
+.pi-footer{margin-top:30px;padding-top:14px;border-top:1px solid #e2e8f0;text-align:center;font-size:10px;color:#94a3b8;line-height:1.6}
+.pi-anulada{background:#fef2f2;border:2px solid #dc2626;border-radius:8px;padding:10px;text-align:center;color:#dc2626;font-weight:800;font-size:16px;margin-bottom:16px}
 
 
 /* PRODUCT IMAGE IN TABLE */
@@ -240,7 +272,6 @@ td{padding:8px 12px;vertical-align:middle}
 
 @media print {
   .label-preview{border:3px dashed #000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .payment-section .pay-methods,.shipping-section .ship-toggle,.ship-form button{display:none!important}
 }
 
 
@@ -599,6 +630,20 @@ td{padding:8px 12px;vertical-align:middle}
     </table>
   </div>
 
+  <!-- COTIZACION EXTRAS (description + images) -->
+  <div id="cotExtrasSection" style="display:none;padding:0 28px 16px">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--pri);margin-bottom:10px">📝 Descripción Adicional / Notas para Cotización</div>
+    <textarea id="cotDescripcion" rows="3" placeholder="Escribe notas, condiciones, tiempos de entrega, observaciones..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;resize:vertical;font-family:inherit;transition:border-color .15s" onfocus="this.style.borderColor='var(--pri)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    <div style="margin-top:10px">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px">📷 Imágenes adjuntas (opcional)</div>
+      <div id="cotImagenes" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);transition:all .15s" onmouseover="this.style.borderColor='var(--pri)';this.style.color='var(--pri)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        ➕ Agregar imagen
+        <input type="file" accept="image/*" multiple style="display:none" onchange="addCotImages(this)">
+      </label>
+    </div>
+  </div>
+
   <!-- TOTALS -->
   <div class="totals-section">
     <div class="totals-box">
@@ -848,7 +893,19 @@ td{padding:8px 12px;vertical-align:middle}
   <div class="inv-list-title">
     📋 Historial de Documentos
     <span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:8px" id="histCount"></span>
-    <button class="btn btn-sm btn-w" style="border:1px solid var(--border);margin-left:auto" onclick="exportHistCSV()">⬇ Exportar Historial CSV</button>
+    <button class="btn btn-sm btn-w" style="border:1px solid var(--border);margin-left:auto" onclick="exportHistCSV()">⬇ Exportar CSV</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1;min-width:200px;position:relative">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted)">🔍</span>
+      <input type="text" id="histSearch" placeholder="Buscar por cliente, RUC, Nº documento, email..." style="width:100%;padding:10px 14px 10px 36px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none;transition:border-color .15s" oninput="renderHistorial()">
+    </div>
+    <div style="display:flex;gap:4px">
+      <button class="hist-filter-btn sel" data-type="all" onclick="setHistFilter('all')">Todos</button>
+      <button class="hist-filter-btn" data-type="nota" onclick="setHistFilter('nota')">📋 Notas</button>
+      <button class="hist-filter-btn" data-type="factura" onclick="setHistFilter('factura')">🧾 Facturas</button>
+      <button class="hist-filter-btn" data-type="cotizacion" onclick="setHistFilter('cotizacion')">📝 Cotizaciones</button>
+    </div>
   </div>
   <div class="inv-list" id="historialList"></div>
 </div>
@@ -865,6 +922,9 @@ td{padding:8px 12px;vertical-align:middle}
   </div>
 </div>
 </div>
+
+<!-- PRINT AREA (hidden, only visible when printing) -->
+<div id="printArea" style="display:none"></div>
 
 <!-- MODAL CONFIRM ANULAR -->
 <div class="overlay" id="modalAnular">
@@ -1339,15 +1399,9 @@ function generarRotulo() {
 }
 
 function printLabel() {
-  // Hide everything except the label for printing
   const label = document.getElementById('labelPreview');
-  const origBody = document.body.innerHTML;
-  const labelHTML = label.outerHTML;
-  document.body.innerHTML = `<div style="padding:20px">${labelHTML}</div>`;
+  document.getElementById('printArea').innerHTML = label.outerHTML;
   window.print();
-  document.body.innerHTML = origBody;
-  // Re-init event listeners
-  location.reload();
 }
 
 
@@ -1519,6 +1573,9 @@ function setDocType(type) {
   updateFactNum();
   // Update header title color
   document.querySelector('.inv-header').style.borderBottomColor = cfg.color;
+  // Show/hide cotización extras
+  var cotSec = document.getElementById('cotExtrasSection');
+  if (cotSec) cotSec.style.display = (type === 'cotizacion') ? 'block' : 'none';
 }
 
 
@@ -2159,6 +2216,57 @@ function recalcTotals() {
   document.getElementById('totalVal').textContent = fmtCur(total);
 }
 
+// ── COTIZACION EXTRAS ───────────────────────────────────
+let cotImagenesData = [];
+
+function addCotImages(input) {
+  var files = input.files;
+  if (!files.length) return;
+  Array.from(files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    if (cotImagenesData.length >= 5) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      cotImagenesData.push(e.target.result);
+      renderCotImagenes();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeCotImage(idx) {
+  cotImagenesData.splice(idx, 1);
+  renderCotImagenes();
+}
+
+function renderCotImagenes() {
+  var container = document.getElementById('cotImagenes');
+  if (!container) return;
+  container.innerHTML = cotImagenesData.map(function(src, i) {
+    return '<div style="position:relative;width:80px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border)">'
+      + '<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">'
+      + '<button onclick="removeCotImage('+i+')" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function getCotExtras() {
+  if (currentDocType !== 'cotizacion') return null;
+  var desc = document.getElementById('cotDescripcion');
+  return {
+    descripcion: desc ? desc.value.trim() : '',
+    imagenes: cotImagenesData.slice()
+  };
+}
+
+function clearCotExtras() {
+  var desc = document.getElementById('cotDescripcion');
+  if (desc) desc.value = '';
+  cotImagenesData = [];
+  renderCotImagenes();
+}
+
 // ── EMIT FACTURA ────────────────────────────────────────
 function emitirFactura() {
   // Validate
@@ -2211,7 +2319,8 @@ function emitirFactura() {
     estado: 'EMITIDA',
     emitidaAt: new Date().toISOString(),
     pago: getPaymentData(),
-    envio: getShippingData()
+    envio: getShippingData(),
+    cotExtras: getCotExtras()
   };
 
   // Deduct from inventory
@@ -2249,6 +2358,7 @@ function emitirFactura() {
   });
   clearPayment();
   clearShipping();
+  clearCotExtras();
   document.getElementById('discValue').value = '0';
   document.getElementById('factDate').value = today();
   document.getElementById('prodSearch').value = '';
@@ -2324,39 +2434,73 @@ function cargarCliente(idx) {
 }
 
 // ── HISTORIAL ───────────────────────────────────────────
+let histFilterType = 'all';
+
+function setHistFilter(type) {
+  histFilterType = type;
+  document.querySelectorAll('.hist-filter-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.type === type); });
+  renderHistorial();
+}
+
 function renderHistorial() {
   const list = document.getElementById('historialList');
   const count = document.getElementById('histCount');
-  if (facturas.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">No hay facturas emitidas aún</div>';
-    count.textContent = '';
-    document.getElementById('historialSection').style.display = facturas.length ? '' : '';
+  const searchInput = document.getElementById('histSearch');
+  const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  // Filter by type
+  let filtered = facturas.map(function(f, i){ return {f:f, idx:i}; });
+  if (histFilterType !== 'all') {
+    filtered = filtered.filter(function(x){ return x.f.tipoDoc === histFilterType; });
+  }
+
+  // Filter by search query
+  if (q.length >= 1) {
+    filtered = filtered.filter(function(x) {
+      var f = x.f;
+      var docNum = ((f.tipoDocPrefix||'NV')+'-'+fmtNum(f.numero)).toLowerCase();
+      var cli = f.cliente;
+      return docNum.includes(q)
+        || (cli.nombre||'').toLowerCase().includes(q)
+        || (cli.ruc||'').toLowerCase().includes(q)
+        || (cli.email||'').toLowerCase().includes(q)
+        || (cli.telefono||'').toLowerCase().includes(q)
+        || (cli.ciudad||'').toLowerCase().includes(q)
+        || (f.fecha||'').includes(q)
+        || String(f.numero).includes(q);
+    });
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">'+(q?'No se encontraron resultados para "'+escH(q)+'"':'No hay documentos emitidos aún')+'</div>';
+    count.textContent = facturas.length > 0 ? '0 de '+facturas.length : '';
     return;
   }
-  count.textContent = facturas.length + ' factura(s)';
-  list.innerHTML = facturas.map((f, i) => {
-    const anulada = f.estado === 'ANULADA';
-    return `<div class="inv-list-item" style="${anulada ? 'opacity:.5;text-decoration:line-through' : ''}">
-      <div class="inv-li-left" onclick="verFactura(${i})" style="flex:1;cursor:pointer">
-        <div>
-          <div class="inv-li-num">${f.tipoDocPrefix||"NV"}-${fmtNum(f.numero)}</div>
-          <div style="font-size:10px;color:var(--muted);font-weight:500">${f.tipoDocLabel||"NOTA DE VENTA"}</div>
-          ${anulada ? '<span style="font-size:10px;color:var(--red);font-weight:700;text-decoration:none">ANULADA</span>' : ''}
-        </div>
-        <div>
-          <div class="inv-li-client">${escH(f.cliente.nombre)}<small>${escH(f.cliente.ruc)}</small></div>
-        </div>
-      </div>
-      <div class="inv-li-right" onclick="verFactura(${i})" style="cursor:pointer">
-        <div class="inv-li-total">${fmtCur(f.total)}</div>
-          ${f.pago&&f.pago.metodo==='credito'? '<div style="font-size:10px;font-weight:700;color:'+(getSaldo(f.numero)<=0.01?'var(--green)':'var(--red)')+'">'+(getSaldo(f.numero)<=0.01?'✅ PAGADO':'⏳ Saldo: '+fmtCur(getSaldo(f.numero)))+'</div>':''}
-        <div class="inv-li-date">${f.fecha}</div>
-        <div class="inv-li-items">${f.items.length} producto(s)</div>
-      </div>
-      <div class="inv-li-actions">
-        ${!anulada ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();abrirAnular(${i})">Anular</button>` : ''}
-      </div>
-    </div>`;
+  count.textContent = filtered.length + (filtered.length !== facturas.length ? ' de '+facturas.length : '') + ' documento(s)';
+  list.innerHTML = filtered.map(function(x) {
+    var f = x.f, i = x.idx;
+    var anulada = f.estado === 'ANULADA';
+    var typeColors = {nota:'#059669',factura:'#1a56db',cotizacion:'#d97706'};
+    var typeColor = typeColors[f.tipoDoc] || '#64748b';
+    return '<div class="inv-list-item" style="'+(anulada ? 'opacity:.5;' : '')+'">'
+      + '<div class="inv-li-left" onclick="verFactura('+i+')" style="flex:1;cursor:pointer">'
+      + '<div>'
+      + '<div class="inv-li-num">'+(f.tipoDocPrefix||"NV")+'-'+fmtNum(f.numero)+'</div>'
+      + '<div style="font-size:10px;font-weight:700;color:'+typeColor+'">'+(f.tipoDocLabel||"NOTA DE VENTA")+'</div>'
+      + (anulada ? '<span style="font-size:10px;color:var(--red);font-weight:700">⛔ ANULADA</span>' : '')
+      + '</div>'
+      + '<div>'
+      + '<div class="inv-li-client">'+escH(f.cliente.nombre)+'<small>'+escH(f.cliente.ruc)+(f.cliente.email?' · '+escH(f.cliente.email):'')+'</small></div>'
+      + '</div></div>'
+      + '<div class="inv-li-right" onclick="verFactura('+i+')" style="cursor:pointer">'
+      + '<div class="inv-li-total">'+fmtCur(f.total)+'</div>'
+      + (f.pago&&f.pago.metodo==='credito'? '<div style="font-size:10px;font-weight:700;color:'+(getSaldo(f.numero)<=0.01?'var(--green)':'var(--red)')+'">'+(getSaldo(f.numero)<=0.01?'✅ PAGADO':'⏳ Saldo: '+fmtCur(getSaldo(f.numero)))+'</div>':'')
+      + '<div class="inv-li-date">'+f.fecha+'</div>'
+      + '<div class="inv-li-items">'+f.items.length+' producto(s)</div>'
+      + '</div>'
+      + '<div class="inv-li-actions">'
+      + (!anulada ? '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();abrirAnular('+i+')">Anular</button>' : '')
+      + '</div></div>';
   }).join('');
 }
 
@@ -2450,6 +2594,24 @@ function verFactura(idx) {
       ${f.envio.referencia ? '<br>Ref: '+escH(f.envio.referencia) : ''}
     </div>`;
   }
+  // Cotización extras (description + images)
+  if (f.cotExtras) {
+    if (f.cotExtras.descripcion) {
+      html += `<div style="margin-top:14px;padding:12px 16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:13px">
+        <strong style="color:#92400E">📝 Notas / Descripción:</strong><br>
+        <div style="margin-top:6px;white-space:pre-wrap;color:#78350F">${escH(f.cotExtras.descripcion)}</div>
+      </div>`;
+    }
+    if (f.cotExtras.imagenes && f.cotExtras.imagenes.length > 0) {
+      html += `<div style="margin-top:10px"><strong style="font-size:12px;color:var(--muted)">📷 Imágenes adjuntas:</strong>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">`;
+      f.cotExtras.imagenes.forEach(function(src) {
+        html += '<img src="'+src+'" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" onclick="window.open(this.src)">';
+      });
+      html += '</div></div>';
+    }
+  }
+
   document.getElementById('verFactContent').innerHTML = html;
   document.getElementById('modalVerFact').classList.add('open');
   // Render abonos
@@ -2457,8 +2619,139 @@ function verFactura(idx) {
 }
 
 function printFactura() {
+  // Find which invoice is currently being viewed
+  var content = document.getElementById('verFactContent').innerHTML;
+  // Extract invoice number from the modal content
+  var numMatch = content.match(/(NV|FA|CT)-(\d+)/);
+  if (!numMatch) { closeModal('modalVerFact'); window.print(); return; }
+  var prefix = numMatch[1];
+  var num = parseInt(numMatch[2]);
+  var f = facturas.find(function(x){ return x.numero === num; });
+  if (!f) { closeModal('modalVerFact'); window.print(); return; }
+
+  var anulada = f.estado === 'ANULADA';
+  var payLabels = {efectivo:'Efectivo',transferencia:'Transferencia Bancaria',tarjeta:'Tarjeta de Crédito/Débito',cheque:'Cheque',credito:'Crédito',mixto:'Mixto'};
+
+  var html = '<div class="print-invoice">';
+
+  // Anulada banner
+  if (anulada) {
+    html += '<div class="pi-anulada">DOCUMENTO ANULADO</div>';
+  }
+
+  // Header
+  html += '<div class="pi-header">';
+  html += '<div class="pi-logo-area">';
+  html += '<img src="'+LOGO_B64+'" alt="BoxDental">';
+  html += '<div class="pi-company">';
+  html += '<h2>'+COMPANY.nombre+'</h2>';
+  html += COMPANY.direccion+'<br>';
+  html += COMPANY.ciudad+'<br>';
+  html += 'Tel: '+COMPANY.tel+'<br>';
+  html += 'RUC: '+COMPANY.ruc+'<br>';
+  html += COMPANY.email+' | '+COMPANY.web;
+  html += '</div></div>';
+  html += '<div class="pi-doc-info">';
+  html += '<div class="pi-doc-type">'+(f.tipoDocLabel||'NOTA DE VENTA')+'</div><br>';
+  html += '<div class="pi-doc-num">'+(f.tipoDocPrefix||'NV')+'-'+fmtNum(f.numero)+'</div>';
+  html += '<div class="pi-doc-date">Fecha: '+f.fecha+'</div>';
+  html += '</div></div>';
+
+  // Client info
+  html += '<div class="pi-client">';
+  html += '<div class="pi-client-title">Datos del Cliente</div>';
+  html += '<div class="pi-client-name">'+escH(f.cliente.nombre)+'</div>';
+  html += '<div class="pi-client-detail">';
+  html += 'RUC/CI: '+escH(f.cliente.ruc);
+  if (f.cliente.direccion) html += '<br>Dirección: '+escH(f.cliente.direccion);
+  if (f.cliente.ciudad) html += ' - '+escH(f.cliente.ciudad);
+  if (f.cliente.telefono) html += '<br>Teléfono: '+escH(f.cliente.telefono);
+  if (f.cliente.email) html += '<br>Email: '+escH(f.cliente.email);
+  html += '</div></div>';
+
+  // Items table
+  html += '<table class="pi-table"><thead><tr>';
+  html += '<th>#</th><th>Descripción</th><th class="c">Cant.</th>';
+  html += '<th class="r">P. Unitario</th>';
+  var hasDisc = f.items.some(function(it){ return (it.descUnit||0) > 0; });
+  if (hasDisc) html += '<th class="r">Desc/U</th>';
+  html += '<th class="r">Total</th>';
+  html += '</tr></thead><tbody>';
+  f.items.forEach(function(it, i) {
+    var disc = it.descUnit || 0;
+    html += '<tr>';
+    html += '<td>'+(i+1)+'</td>';
+    html += '<td><strong>'+escH(it.nombre)+'</strong><br><span style="font-size:10px;color:#94a3b8">'+escH(it.categoria||'')+'</span></td>';
+    html += '<td class="c" style="font-weight:600">'+it.qty+'</td>';
+    html += '<td class="r">'+fmtCur(it.precioUnit)+'</td>';
+    if (hasDisc) html += '<td class="r" style="color:'+(disc>0?'#dc2626':'#ccc')+'">'+( disc>0 ? '-'+fmtCur(disc) : '—')+'</td>';
+    html += '<td class="r" style="font-weight:700">'+fmtCur(it.total)+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Totals
+  html += '<div class="pi-totals"><div class="pi-totals-box">';
+  html += '<div class="pi-totals-row"><span>Subtotal</span><strong>'+fmtCur(f.subtotal)+'</strong></div>';
+  if (f.descuento > 0) {
+    html += '<div class="pi-totals-row discount"><span>Descuento '+(f.descuentoTipo==='pct'?'('+f.descuentoValor+'%)':'')+'</span><strong>-'+fmtCur(f.descuento)+'</strong></div>';
+    html += '<div class="pi-totals-row"><span>Subtotal c/desc.</span><strong>'+fmtCur(f.subtotalConDescuento)+'</strong></div>';
+  }
+  html += '<div class="pi-totals-row"><span>IVA ('+f.taxPct+'%)</span><strong>'+fmtCur(f.tax)+'</strong></div>';
+  html += '<div class="pi-totals-row grand"><span>TOTAL</span><span>'+fmtCur(f.total)+'</span></div>';
+  html += '</div></div>';
+
+  // Payment info
+  if (f.pago && f.pago.metodo && f.pago.metodo !== 'no_especificado') {
+    html += '<div class="pi-payment"><strong>Forma de pago:</strong> '+(payLabels[f.pago.metodo]||f.pago.metodo);
+    if (f.pago.metodo==='efectivo' && f.pago.montoRecibido) html += ' | Recibido: '+fmtCur(f.pago.montoRecibido)+' | Cambio: '+fmtCur(f.pago.cambio);
+    if (f.pago.metodo==='transferencia') html += ' | '+(f.pago.banco||'')+' | Ref: '+(f.pago.referencia||'');
+    if (f.pago.metodo==='credito') html += ' | Plazo: '+(f.pago.plazo||30)+' días';
+    html += '</div>';
+  }
+
+  // Shipping
+  if (f.envio && f.envio.destinatario) {
+    html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px">';
+    html += '<strong>Envío:</strong> '+escH(f.envio.destinatario)+' - '+escH(f.envio.direccion||'')+', '+escH(f.envio.ciudad||'');
+    if (f.envio.telefono) html += ' | Tel: '+escH(f.envio.telefono);
+    if (f.envio.courier) html += ' | Courier: '+escH(f.envio.courier);
+    if (f.envio.guia) html += ' | Guía: '+escH(f.envio.guia);
+    html += '</div>';
+  }
+
+  // Cotización extras (description + images)
+  if (f.cotExtras) {
+    if (f.cotExtras.descripcion) {
+      html += '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px">';
+      html += '<strong>Descripción adicional:</strong><br>';
+      html += '<div style="white-space:pre-wrap;margin-top:6px">'+escH(f.cotExtras.descripcion)+'</div>';
+      html += '</div>';
+    }
+    if (f.cotExtras.imagenes && f.cotExtras.imagenes.length > 0) {
+      html += '<div style="margin-top:12px;page-break-inside:avoid">';
+      html += '<strong style="font-size:12px">Imágenes adjuntas:</strong>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">';
+      f.cotExtras.imagenes.forEach(function(img) {
+        html += '<img src="'+img+'" style="max-width:220px;max-height:180px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain">';
+      });
+      html += '</div></div>';
+    }
+  }
+
+  // Footer
+  html += '<div class="pi-footer">';
+  html += COMPANY.nombre+' | RUC: '+COMPANY.ruc+'<br>';
+  html += COMPANY.direccion+' | '+COMPANY.ciudad+'<br>';
+  html += COMPANY.tel+' | '+COMPANY.email+'<br>';
+  html += 'Gracias por su compra';
+  html += '</div>';
+
+  html += '</div>';
+
+  document.getElementById('printArea').innerHTML = html;
   closeModal('modalVerFact');
-  setTimeout(() => window.print(), 200);
+  setTimeout(function() { window.print(); }, 300);
 }
 
 // ── ANULAR FACTURA ──────────────────────────────────────
