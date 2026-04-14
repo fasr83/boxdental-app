@@ -919,7 +919,8 @@ td{padding:8px 12px;vertical-align:middle}
   <div id="verFactContent"></div>
   <div class="modal-footer">
     <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalVerFact')">Cerrar</button>
-    <button class="btn btn-pri" onclick="printFactura(currentViewIdx)">🖨 Imprimir</button>
+    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'A4')" style="background:#1a56db">🖨 Imprimir A4</button>
+    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'80mm')" style="background:#059669">🧾 Ticket 80mm</button>
   </div>
 </div>
 </div>
@@ -2621,141 +2622,185 @@ function verFactura(idx) {
   setTimeout(() => renderAbonosEnModal(f.numero), 100);
 }
 
-function printFactura(idx) {
+function printFactura(idx, formato) {
   if (idx === null || idx === undefined) { showToast('Error: no se encontró el documento','err'); return; }
   var f = facturas[idx];
   if (!f) { showToast('Error: documento no encontrado','err'); return; }
 
+  var is80 = formato === '80mm';
   var anulada = f.estado === 'ANULADA';
   var docPrefix = f.tipoDocPrefix || 'NV';
   var docLabel = f.tipoDocLabel || 'NOTA DE VENTA';
-  var payLabels = {efectivo:'Efectivo',transferencia:'Transferencia Bancaria',tarjeta:'Tarjeta',cheque:'Cheque',credito:'Crédito',mixto:'Mixto'};
-
-  var html = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#222;max-width:780px;margin:0 auto;padding:24px;font-size:13px;line-height:1.5">';
-
-  // Anulada
-  if (anulada) {
-    html += '<div style="background:#fef2f2;border:2px solid #dc2626;padding:10px;text-align:center;color:#dc2626;font-weight:800;font-size:16px;margin-bottom:16px">DOCUMENTO ANULADO</div>';
-  }
-
-  // ── HEADER: Logo + Company | Doc Info ──
-  html += '<table style="width:100%;border:none;margin-bottom:0"><tr>';
-  html += '<td style="vertical-align:top;width:60%;padding:0;border:none">';
-  html += '<table style="border:none"><tr>';
-  html += '<td style="vertical-align:top;padding:0 12px 0 0;border:none"><img src="'+LOGO_B64+'" style="height:50px;border-radius:6px"></td>';
-  html += '<td style="vertical-align:top;padding:0;border:none">';
-  html += '<div style="font-size:17px;font-weight:800;color:#1a56db;margin-bottom:2px">'+COMPANY.nombre+'</div>';
-  html += '<div style="font-size:10px;color:#666;line-height:1.5">'+COMPANY.direccion+'<br>'+COMPANY.ciudad+'<br>Tel: '+COMPANY.tel+' | RUC: '+COMPANY.ruc+'<br>'+COMPANY.email+' | '+COMPANY.web+'</div>';
-  html += '</td></tr></table></td>';
-  html += '<td style="vertical-align:top;text-align:right;padding:0;border:none">';
-  html += '<div style="font-size:10px;font-weight:700;color:#fff;background:#1a56db;padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:6px">'+docLabel+'</div><br>';
-  html += '<div style="font-size:22px;font-weight:800;color:#1a56db">'+docPrefix+'-'+fmtNum(f.numero)+'</div>';
-  html += '<div style="font-size:11px;color:#666;margin-top:2px">Fecha: '+f.fecha+'</div>';
-  html += '</td></tr></table>';
-
-  // ── Línea separadora ──
-  html += '<div style="border-bottom:2px solid #1a56db;margin:12px 0 14px"></div>';
-
-  // ── CLIENTE ──
-  html += '<div style="margin-bottom:14px;font-size:12px">';
-  html += '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#999;letter-spacing:.06em;margin-bottom:4px">Datos del Cliente</div>';
-  html += '<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+escH(f.cliente.nombre)+'</div>';
-  html += '<span>RUC/CI: '+escH(f.cliente.ruc)+'</span>';
-  if (f.cliente.direccion) html += ' &nbsp;|&nbsp; '+escH(f.cliente.direccion);
-  if (f.cliente.ciudad) html += ', '+escH(f.cliente.ciudad);
-  if (f.cliente.telefono) html += ' &nbsp;|&nbsp; Tel: '+escH(f.cliente.telefono);
-  if (f.cliente.email) html += ' &nbsp;|&nbsp; '+escH(f.cliente.email);
-  html += '</div>';
-
-  // ── ITEMS TABLE ──
+  var payLabels = {efectivo:'Efectivo',transferencia:'Transferencia',tarjeta:'Tarjeta',cheque:'Cheque',credito:'Crédito',mixto:'Mixto'};
   var hasDisc = f.items.some(function(it){ return (it.descUnit||0) > 0; });
-  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px">';
-  html += '<thead><tr style="background:#f1f5f9;border-bottom:2px solid #ddd">';
-  html += '<th style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">#</th>';
-  html += '<th style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Descripción</th>';
-  html += '<th style="padding:6px 8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Cant.</th>';
-  html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">P. Unit.</th>';
-  if (hasDisc) html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Desc/U</th>';
-  html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Total</th>';
-  html += '</tr></thead><tbody>';
-  f.items.forEach(function(it, i) {
-    var disc = it.descUnit || 0;
-    var bg = i % 2 === 0 ? '#fff' : '#fafbfc';
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #eee">';
-    html += '<td style="padding:6px 8px;color:#999">'+(i+1)+'</td>';
-    html += '<td style="padding:6px 8px;font-weight:500">'+escH(it.nombre)+'</td>';
-    html += '<td style="padding:6px 8px;text-align:center;font-weight:600">'+it.qty+'</td>';
-    html += '<td style="padding:6px 8px;text-align:right">'+fmtCur(it.precioUnit)+'</td>';
-    if (hasDisc) html += '<td style="padding:6px 8px;text-align:right;color:'+(disc>0?'#dc2626':'#ccc')+'">'+(disc>0?'-'+fmtCur(disc):'—')+'</td>';
-    html += '<td style="padding:6px 8px;text-align:right;font-weight:700">'+fmtCur(it.total)+'</td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
+  var html = '';
 
-  // ── TOTALES (alineados a la derecha) ──
-  html += '<table style="margin-left:auto;min-width:240px;font-size:12px;border-collapse:collapse">';
-  html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;color:#666;border:none">Subtotal</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.subtotal)+'</td></tr>';
-  if (f.descuento > 0) {
-    html += '<tr style="border-bottom:1px solid #eee;color:#dc2626"><td style="padding:5px 12px;border:none">Descuento '+(f.descuentoTipo==='pct'?'('+f.descuentoValor+'%)':'')+'</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">-'+fmtCur(f.descuento)+'</td></tr>';
-    html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;border:none">Subtotal c/desc.</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.subtotalConDescuento)+'</td></tr>';
-  }
-  html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;color:#666;border:none">IVA ('+f.taxPct+'%)</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.tax)+'</td></tr>';
-  html += '<tr style="border-top:2px solid #059669"><td style="padding:8px 12px;font-size:16px;font-weight:800;color:#059669;border:none">TOTAL</td><td style="padding:8px 12px;text-align:right;font-size:16px;font-weight:800;color:#059669;border:none">'+fmtCur(f.total)+'</td></tr>';
-  html += '</table>';
-
-  // ── Pago ──
-  if (f.pago && f.pago.metodo && f.pago.metodo !== 'no_especificado') {
-    html += '<div style="margin-top:14px;padding:8px 14px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px">';
-    html += '<strong>Forma de pago:</strong> '+(payLabels[f.pago.metodo]||f.pago.metodo);
-    if (f.pago.metodo==='efectivo' && f.pago.montoRecibido) html += ' | Recibido: '+fmtCur(f.pago.montoRecibido)+' | Cambio: '+fmtCur(f.pago.cambio);
-    if (f.pago.metodo==='transferencia') html += ' | '+(f.pago.banco||'')+' | Ref: '+(f.pago.referencia||'');
-    if (f.pago.metodo==='credito') html += ' | Plazo: '+(f.pago.plazo||30)+' días';
+  if (is80) {
+    // ════════════════ TICKET 80mm ════════════════
+    html += '<div style="width:72mm;margin:0 auto;font-family:Consolas,monospace;font-size:11px;color:#000;line-height:1.3">';
+    // Logo + empresa
+    html += '<div style="text-align:center;margin-bottom:4px">';
+    html += '<img src="'+LOGO_B64+'" style="height:32px;margin-bottom:2px"><br>';
+    html += '<b style="font-size:12px">'+COMPANY.nombre+'</b><br>';
+    html += '<span style="font-size:9px">'+COMPANY.direccion+'<br>'+COMPANY.ciudad+'<br>Tel: '+COMPANY.tel+' · RUC: '+COMPANY.ruc+'<br>'+COMPANY.email+'</span>';
     html += '</div>';
-  }
-
-  // ── Envío ──
-  if (f.envio && f.envio.destinatario) {
-    html += '<div style="margin-top:8px;padding:8px 14px;background:#f0f9ff;border:1px solid #bae6fd;font-size:11px">';
-    html += '<strong>Envío:</strong> '+escH(f.envio.destinatario)+' — '+escH(f.envio.direccion||'')+', '+escH(f.envio.ciudad||'');
-    if (f.envio.telefono) html += ' | Tel: '+escH(f.envio.telefono);
-    if (f.envio.courier) html += ' | Courier: '+escH(f.envio.courier);
-    if (f.envio.guia) html += ' | Guía: '+escH(f.envio.guia);
+    html += '<div style="border-bottom:1px dashed #000;margin:4px 0"></div>';
+    // Doc info
+    html += '<div style="text-align:center;margin:4px 0"><b style="font-size:13px">'+docLabel+'</b><br><b style="font-size:14px">'+docPrefix+'-'+fmtNum(f.numero)+'</b><br>'+f.fecha+'</div>';
+    if (anulada) html += '<div style="text-align:center;font-weight:800;border:1px solid #000;padding:2px;margin:4px 0">*** ANULADO ***</div>';
+    html += '<div style="border-bottom:1px dashed #000;margin:4px 0"></div>';
+    // Cliente
+    html += '<div style="font-size:10px;margin:4px 0"><b>'+escH(f.cliente.nombre)+'</b><br>CI/RUC: '+escH(f.cliente.ruc);
+    if (f.cliente.telefono) html += '<br>Tel: '+escH(f.cliente.telefono);
     html += '</div>';
-  }
-
-  // ── Cotización extras ──
-  if (f.cotExtras) {
-    if (f.cotExtras.descripcion) {
-      html += '<div style="margin-top:8px;padding:8px 14px;background:#fffbeb;border:1px solid #fcd34d;font-size:11px">';
-      html += '<strong>Descripción adicional:</strong><br>';
-      html += '<div style="white-space:pre-wrap;margin-top:4px">'+escH(f.cotExtras.descripcion)+'</div>';
+    html += '<div style="border-bottom:1px dashed #000;margin:4px 0"></div>';
+    // Items
+    f.items.forEach(function(it, i) {
+      var disc = it.descUnit || 0;
+      html += '<div style="margin:3px 0">';
+      html += '<div style="font-size:10px"><b>'+escH(it.nombre)+'</b></div>';
+      html += '<div style="display:flex;justify-content:space-between;font-size:10px">';
+      html += '<span>'+it.qty+' x '+fmtCur(it.precioUnit)+(disc>0?' (-'+fmtCur(disc)+')':'')+'</span>';
+      html += '<b>'+fmtCur(it.total)+'</b>';
+      html += '</div></div>';
+    });
+    html += '<div style="border-bottom:1px dashed #000;margin:4px 0"></div>';
+    // Totales
+    html += '<div style="font-size:10px">';
+    html += '<div style="display:flex;justify-content:space-between"><span>Subtotal</span><span>'+fmtCur(f.subtotal)+'</span></div>';
+    if (f.descuento > 0) {
+      html += '<div style="display:flex;justify-content:space-between"><span>Descuento</span><span>-'+fmtCur(f.descuento)+'</span></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between"><span>IVA ('+f.taxPct+'%)</span><span>'+fmtCur(f.tax)+'</span></div>';
+    html += '</div>';
+    html += '<div style="border-bottom:1px dashed #000;margin:3px 0"></div>';
+    html += '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;margin:4px 0"><span>TOTAL</span><span>'+fmtCur(f.total)+'</span></div>';
+    html += '<div style="border-bottom:1px dashed #000;margin:3px 0"></div>';
+    // Pago
+    if (f.pago && f.pago.metodo && f.pago.metodo !== 'no_especificado') {
+      html += '<div style="font-size:10px;margin:3px 0">Pago: '+(payLabels[f.pago.metodo]||f.pago.metodo);
+      if (f.pago.metodo==='efectivo' && f.pago.montoRecibido) html += '<br>Recibido: '+fmtCur(f.pago.montoRecibido)+' Cambio: '+fmtCur(f.pago.cambio);
       html += '</div>';
     }
-    if (f.cotExtras.imagenes && f.cotExtras.imagenes.length > 0) {
-      html += '<div style="margin-top:8px;page-break-inside:avoid">';
-      html += '<strong style="font-size:11px">Imágenes adjuntas:</strong>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">';
-      f.cotExtras.imagenes.forEach(function(img) {
-        html += '<img src="'+img+'" style="max-width:200px;max-height:160px;border:1px solid #ddd;object-fit:contain">';
-      });
-      html += '</div></div>';
+    // Footer
+    html += '<div style="text-align:center;font-size:9px;margin-top:6px;padding-top:4px;border-top:1px dashed #000">';
+    html += 'Gracias por su compra<br>'+COMPANY.web+'</div>';
+    html += '<div style="height:10mm"></div>'; // espacio para corte
+    html += '</div>';
+  } else {
+    // ════════════════ A4 COMPACTO ════════════════
+    html += '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#222;max-width:780px;margin:0 auto;padding:10px 20px;font-size:11px;line-height:1.4">';
+
+    if (anulada) {
+      html += '<div style="text-align:center;color:#dc2626;font-weight:800;font-size:14px;border:2px solid #dc2626;padding:4px;margin-bottom:8px">DOCUMENTO ANULADO</div>';
     }
+
+    // Header compacto: una sola fila
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:0"><tr>';
+    html += '<td style="width:40px;vertical-align:top;padding:0 8px 0 0;border:none"><img src="'+LOGO_B64+'" style="height:36px"></td>';
+    html += '<td style="vertical-align:top;padding:0;border:none;font-size:9px;color:#555;line-height:1.4">';
+    html += '<b style="font-size:12px;color:#1a56db">'+COMPANY.nombre+'</b><br>';
+    html += COMPANY.direccion+' · '+COMPANY.ciudad+'<br>';
+    html += 'Tel: '+COMPANY.tel+' · RUC: '+COMPANY.ruc+' · '+COMPANY.email+'</td>';
+    html += '<td style="vertical-align:top;text-align:right;padding:0;border:none;white-space:nowrap">';
+    html += '<span style="font-size:9px;font-weight:700;color:#fff;background:#1a56db;padding:2px 8px;display:inline-block">'+docLabel+'</span><br>';
+    html += '<b style="font-size:18px;color:#1a56db">'+docPrefix+'-'+fmtNum(f.numero)+'</b><br>';
+    html += '<span style="font-size:10px;color:#666">'+f.fecha+'</span></td>';
+    html += '</tr></table>';
+    html += '<div style="border-bottom:2px solid #1a56db;margin:6px 0 8px"></div>';
+
+    // Cliente compacto en una línea
+    html += '<div style="font-size:10px;margin-bottom:8px;padding:4px 8px;background:#f8f9fa">';
+    html += '<b style="font-size:11px">'+escH(f.cliente.nombre)+'</b> · CI/RUC: '+escH(f.cliente.ruc);
+    if (f.cliente.direccion) html += ' · '+escH(f.cliente.direccion);
+    if (f.cliente.ciudad) html += ', '+escH(f.cliente.ciudad);
+    if (f.cliente.telefono) html += ' · Tel: '+escH(f.cliente.telefono);
+    if (f.cliente.email) html += ' · '+escH(f.cliente.email);
+    html += '</div>';
+
+    // Items tabla compacta
+    html += '<table style="width:100%;border-collapse:collapse;font-size:10px">';
+    html += '<tr style="background:#eef;border-bottom:1px solid #ccc">';
+    html += '<th style="padding:3px 4px;text-align:left;font-size:8px;text-transform:uppercase;color:#555">#</th>';
+    html += '<th style="padding:3px 4px;text-align:left;font-size:8px;text-transform:uppercase;color:#555">Producto</th>';
+    html += '<th style="padding:3px 4px;text-align:center;font-size:8px;text-transform:uppercase;color:#555">Cant</th>';
+    html += '<th style="padding:3px 4px;text-align:right;font-size:8px;text-transform:uppercase;color:#555">P.Unit</th>';
+    if (hasDisc) html += '<th style="padding:3px 4px;text-align:right;font-size:8px;text-transform:uppercase;color:#555">Desc</th>';
+    html += '<th style="padding:3px 4px;text-align:right;font-size:8px;text-transform:uppercase;color:#555">Total</th>';
+    html += '</tr>';
+    f.items.forEach(function(it, i) {
+      var disc = it.descUnit || 0;
+      html += '<tr style="border-bottom:1px solid #eee">';
+      html += '<td style="padding:2px 4px;color:#999">'+(i+1)+'</td>';
+      html += '<td style="padding:2px 4px">'+escH(it.nombre)+'</td>';
+      html += '<td style="padding:2px 4px;text-align:center;font-weight:600">'+it.qty+'</td>';
+      html += '<td style="padding:2px 4px;text-align:right">'+fmtCur(it.precioUnit)+'</td>';
+      if (hasDisc) html += '<td style="padding:2px 4px;text-align:right;color:'+(disc>0?'#c00':'#ccc')+'">'+(disc>0?'-'+fmtCur(disc):'—')+'</td>';
+      html += '<td style="padding:2px 4px;text-align:right;font-weight:600">'+fmtCur(it.total)+'</td>';
+      html += '</tr>';
+    });
+    html += '</table>';
+
+    // Totales compactos
+    html += '<table style="margin-left:auto;font-size:10px;border-collapse:collapse;margin-top:4px">';
+    html += '<tr><td style="padding:2px 8px;color:#666;border:none">Subtotal</td><td style="padding:2px 8px;text-align:right;border:none">'+fmtCur(f.subtotal)+'</td></tr>';
+    if (f.descuento > 0) {
+      html += '<tr style="color:#c00"><td style="padding:2px 8px;border:none">Descuento '+(f.descuentoTipo==='pct'?'('+f.descuentoValor+'%)':'')+'</td><td style="padding:2px 8px;text-align:right;border:none">-'+fmtCur(f.descuento)+'</td></tr>';
+    }
+    html += '<tr><td style="padding:2px 8px;color:#666;border:none">IVA ('+f.taxPct+'%)</td><td style="padding:2px 8px;text-align:right;border:none">'+fmtCur(f.tax)+'</td></tr>';
+    html += '<tr style="border-top:2px solid #059669"><td style="padding:4px 8px;font-size:14px;font-weight:800;color:#059669;border:none">TOTAL</td><td style="padding:4px 8px;text-align:right;font-size:14px;font-weight:800;color:#059669;border:none">'+fmtCur(f.total)+'</td></tr>';
+    html += '</table>';
+
+    // Pago (compacto)
+    if (f.pago && f.pago.metodo && f.pago.metodo !== 'no_especificado') {
+      html += '<div style="margin-top:6px;padding:3px 8px;background:#f0fdf4;font-size:9px">';
+      html += '<b>Pago:</b> '+(payLabels[f.pago.metodo]||f.pago.metodo);
+      if (f.pago.metodo==='efectivo' && f.pago.montoRecibido) html += ' · Recibido: '+fmtCur(f.pago.montoRecibido)+' · Cambio: '+fmtCur(f.pago.cambio);
+      if (f.pago.metodo==='transferencia') html += ' · '+(f.pago.banco||'')+' Ref: '+(f.pago.referencia||'');
+      if (f.pago.metodo==='credito') html += ' · Plazo: '+(f.pago.plazo||30)+' días';
+      html += '</div>';
+    }
+
+    // Envío
+    if (f.envio && f.envio.destinatario) {
+      html += '<div style="margin-top:4px;padding:3px 8px;background:#f0f9ff;font-size:9px">';
+      html += '<b>Envío:</b> '+escH(f.envio.destinatario)+' — '+escH(f.envio.direccion||'')+', '+escH(f.envio.ciudad||'');
+      if (f.envio.telefono) html += ' · Tel: '+escH(f.envio.telefono);
+      if (f.envio.courier) html += ' · '+escH(f.envio.courier);
+      if (f.envio.guia) html += ' · Guía: '+escH(f.envio.guia);
+      html += '</div>';
+    }
+
+    // CotExtras
+    if (f.cotExtras) {
+      if (f.cotExtras.descripcion) {
+        html += '<div style="margin-top:4px;padding:3px 8px;background:#fffbeb;font-size:9px"><b>Nota:</b> '+escH(f.cotExtras.descripcion)+'</div>';
+      }
+      if (f.cotExtras.imagenes && f.cotExtras.imagenes.length > 0) {
+        html += '<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">';
+        f.cotExtras.imagenes.forEach(function(img) {
+          html += '<img src="'+img+'" style="max-width:150px;max-height:120px;border:1px solid #ddd;object-fit:contain">';
+        });
+        html += '</div>';
+      }
+    }
+
+    // Footer compacto
+    html += '<div style="margin-top:10px;padding-top:4px;border-top:1px solid #ddd;text-align:center;font-size:8px;color:#999">';
+    html += COMPANY.nombre+' · RUC: '+COMPANY.ruc+' · '+COMPANY.tel+' · '+COMPANY.email+' · '+COMPANY.web+'<br>Gracias por su preferencia</div>';
+    html += '</div>';
   }
 
-  // ── Footer ──
-  html += '<div style="margin-top:24px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:9px;color:#999;line-height:1.6">';
-  html += COMPANY.nombre+' | RUC: '+COMPANY.ruc+' | '+COMPANY.direccion+', '+COMPANY.ciudad+'<br>';
-  html += COMPANY.tel+' | '+COMPANY.email+' | '+COMPANY.web+'<br>';
-  html += 'Gracias por su preferencia';
-  html += '</div>';
-
-  html += '</div>';
-
-  // Inject into printArea and trigger print
-  var pa = document.getElementById('printArea');
-  pa.innerHTML = html;
-  closeModal('modalVerFact');
-  setTimeout(function() { window.print(); }, 400);
+  // ── Abrir ventana nueva para imprimir (100% confiable) ──
+  var win = window.open('', '_blank', is80 ? 'width=320,height=600' : 'width=850,height=700');
+  if (!win) { showToast('Permite ventanas emergentes para imprimir','err'); return; }
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+docPrefix+'-'+fmtNum(f.numero)+'</title>');
+  win.document.write('<style>@page{margin:'+(is80?'0':'8mm 10mm')+';'+(is80?'size:80mm auto;':'')+'}*{box-sizing:border-box}body{margin:0;padding:0}</style>');
+  win.document.write('</head><body>');
+  win.document.write(html);
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 400);
 }
 
 // ── ANULAR FACTURA ──────────────────────────────────────
