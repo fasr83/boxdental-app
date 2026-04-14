@@ -174,9 +174,10 @@ td{padding:8px 12px;vertical-align:middle}
 
 /* PRINT STYLES */
 @media print{
-  body>*{display:none!important}
-  #printArea{display:block!important;position:absolute;top:0;left:0;width:100%;background:#fff}
-  body{background:#fff;margin:0;padding:0}
+  html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
+  body>*:not(#printArea){display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;position:absolute!important;left:-9999px!important}
+  #printArea{display:block!important;visibility:visible!important;position:static!important;width:100%!important;height:auto!important;overflow:visible!important;background:#fff!important;margin:0!important;padding:0!important}
+  .overlay,.hdr,.company-bar,.main,.toast,#loginOverlay,#modalUsuarios,#modalVerFact,#modalAnular,#cqOverlay{display:none!important}
 }
 /* Print invoice styles */
 .print-invoice{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;padding:20px;max-width:800px;margin:0 auto}
@@ -918,7 +919,7 @@ td{padding:8px 12px;vertical-align:middle}
   <div id="verFactContent"></div>
   <div class="modal-footer">
     <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalVerFact')">Cerrar</button>
-    <button class="btn btn-pri" onclick="printFactura()">🖨 Imprimir</button>
+    <button class="btn btn-pri" onclick="printFactura(currentViewIdx)">🖨 Imprimir</button>
   </div>
 </div>
 </div>
@@ -2435,6 +2436,7 @@ function cargarCliente(idx) {
 
 // ── HISTORIAL ───────────────────────────────────────────
 let histFilterType = 'all';
+let currentViewIdx = null;
 
 function setHistFilter(type) {
   histFilterType = type;
@@ -2506,6 +2508,7 @@ function renderHistorial() {
 
 // ── VER FACTURA ─────────────────────────────────────────
 function verFactura(idx) {
+  currentViewIdx = idx;
   const f = facturas[idx];
   const anulada = f.estado === 'ANULADA';
   let html = `
@@ -2618,140 +2621,141 @@ function verFactura(idx) {
   setTimeout(() => renderAbonosEnModal(f.numero), 100);
 }
 
-function printFactura() {
-  // Find which invoice is currently being viewed
-  var content = document.getElementById('verFactContent').innerHTML;
-  // Extract invoice number from the modal content
-  var numMatch = content.match(/(NV|FA|CT)-(\d+)/);
-  if (!numMatch) { closeModal('modalVerFact'); window.print(); return; }
-  var prefix = numMatch[1];
-  var num = parseInt(numMatch[2]);
-  var f = facturas.find(function(x){ return x.numero === num; });
-  if (!f) { closeModal('modalVerFact'); window.print(); return; }
+function printFactura(idx) {
+  if (idx === null || idx === undefined) { showToast('Error: no se encontró el documento','err'); return; }
+  var f = facturas[idx];
+  if (!f) { showToast('Error: documento no encontrado','err'); return; }
 
   var anulada = f.estado === 'ANULADA';
-  var payLabels = {efectivo:'Efectivo',transferencia:'Transferencia Bancaria',tarjeta:'Tarjeta de Crédito/Débito',cheque:'Cheque',credito:'Crédito',mixto:'Mixto'};
+  var docPrefix = f.tipoDocPrefix || 'NV';
+  var docLabel = f.tipoDocLabel || 'NOTA DE VENTA';
+  var payLabels = {efectivo:'Efectivo',transferencia:'Transferencia Bancaria',tarjeta:'Tarjeta',cheque:'Cheque',credito:'Crédito',mixto:'Mixto'};
 
-  var html = '<div class="print-invoice">';
+  var html = '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#222;max-width:780px;margin:0 auto;padding:24px;font-size:13px;line-height:1.5">';
 
-  // Anulada banner
+  // Anulada
   if (anulada) {
-    html += '<div class="pi-anulada">DOCUMENTO ANULADO</div>';
+    html += '<div style="background:#fef2f2;border:2px solid #dc2626;padding:10px;text-align:center;color:#dc2626;font-weight:800;font-size:16px;margin-bottom:16px">DOCUMENTO ANULADO</div>';
   }
 
-  // Header
-  html += '<div class="pi-header">';
-  html += '<div class="pi-logo-area">';
-  html += '<img src="'+LOGO_B64+'" alt="BoxDental">';
-  html += '<div class="pi-company">';
-  html += '<h2>'+COMPANY.nombre+'</h2>';
-  html += COMPANY.direccion+'<br>';
-  html += COMPANY.ciudad+'<br>';
-  html += 'Tel: '+COMPANY.tel+'<br>';
-  html += 'RUC: '+COMPANY.ruc+'<br>';
-  html += COMPANY.email+' | '+COMPANY.web;
-  html += '</div></div>';
-  html += '<div class="pi-doc-info">';
-  html += '<div class="pi-doc-type">'+(f.tipoDocLabel||'NOTA DE VENTA')+'</div><br>';
-  html += '<div class="pi-doc-num">'+(f.tipoDocPrefix||'NV')+'-'+fmtNum(f.numero)+'</div>';
-  html += '<div class="pi-doc-date">Fecha: '+f.fecha+'</div>';
-  html += '</div></div>';
+  // ── HEADER: Logo + Company | Doc Info ──
+  html += '<table style="width:100%;border:none;margin-bottom:0"><tr>';
+  html += '<td style="vertical-align:top;width:60%;padding:0;border:none">';
+  html += '<table style="border:none"><tr>';
+  html += '<td style="vertical-align:top;padding:0 12px 0 0;border:none"><img src="'+LOGO_B64+'" style="height:50px;border-radius:6px"></td>';
+  html += '<td style="vertical-align:top;padding:0;border:none">';
+  html += '<div style="font-size:17px;font-weight:800;color:#1a56db;margin-bottom:2px">'+COMPANY.nombre+'</div>';
+  html += '<div style="font-size:10px;color:#666;line-height:1.5">'+COMPANY.direccion+'<br>'+COMPANY.ciudad+'<br>Tel: '+COMPANY.tel+' | RUC: '+COMPANY.ruc+'<br>'+COMPANY.email+' | '+COMPANY.web+'</div>';
+  html += '</td></tr></table></td>';
+  html += '<td style="vertical-align:top;text-align:right;padding:0;border:none">';
+  html += '<div style="font-size:10px;font-weight:700;color:#fff;background:#1a56db;padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:6px">'+docLabel+'</div><br>';
+  html += '<div style="font-size:22px;font-weight:800;color:#1a56db">'+docPrefix+'-'+fmtNum(f.numero)+'</div>';
+  html += '<div style="font-size:11px;color:#666;margin-top:2px">Fecha: '+f.fecha+'</div>';
+  html += '</td></tr></table>';
 
-  // Client info
-  html += '<div class="pi-client">';
-  html += '<div class="pi-client-title">Datos del Cliente</div>';
-  html += '<div class="pi-client-name">'+escH(f.cliente.nombre)+'</div>';
-  html += '<div class="pi-client-detail">';
-  html += 'RUC/CI: '+escH(f.cliente.ruc);
-  if (f.cliente.direccion) html += '<br>Dirección: '+escH(f.cliente.direccion);
-  if (f.cliente.ciudad) html += ' - '+escH(f.cliente.ciudad);
-  if (f.cliente.telefono) html += '<br>Teléfono: '+escH(f.cliente.telefono);
-  if (f.cliente.email) html += '<br>Email: '+escH(f.cliente.email);
-  html += '</div></div>';
+  // ── Línea separadora ──
+  html += '<div style="border-bottom:2px solid #1a56db;margin:12px 0 14px"></div>';
 
-  // Items table
-  html += '<table class="pi-table"><thead><tr>';
-  html += '<th>#</th><th>Descripción</th><th class="c">Cant.</th>';
-  html += '<th class="r">P. Unitario</th>';
+  // ── CLIENTE ──
+  html += '<div style="margin-bottom:14px;font-size:12px">';
+  html += '<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#999;letter-spacing:.06em;margin-bottom:4px">Datos del Cliente</div>';
+  html += '<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+escH(f.cliente.nombre)+'</div>';
+  html += '<span>RUC/CI: '+escH(f.cliente.ruc)+'</span>';
+  if (f.cliente.direccion) html += ' &nbsp;|&nbsp; '+escH(f.cliente.direccion);
+  if (f.cliente.ciudad) html += ', '+escH(f.cliente.ciudad);
+  if (f.cliente.telefono) html += ' &nbsp;|&nbsp; Tel: '+escH(f.cliente.telefono);
+  if (f.cliente.email) html += ' &nbsp;|&nbsp; '+escH(f.cliente.email);
+  html += '</div>';
+
+  // ── ITEMS TABLE ──
   var hasDisc = f.items.some(function(it){ return (it.descUnit||0) > 0; });
-  if (hasDisc) html += '<th class="r">Desc/U</th>';
-  html += '<th class="r">Total</th>';
+  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px">';
+  html += '<thead><tr style="background:#f1f5f9;border-bottom:2px solid #ddd">';
+  html += '<th style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">#</th>';
+  html += '<th style="padding:6px 8px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Descripción</th>';
+  html += '<th style="padding:6px 8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Cant.</th>';
+  html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">P. Unit.</th>';
+  if (hasDisc) html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Desc/U</th>';
+  html += '<th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:#666">Total</th>';
   html += '</tr></thead><tbody>';
   f.items.forEach(function(it, i) {
     var disc = it.descUnit || 0;
-    html += '<tr>';
-    html += '<td>'+(i+1)+'</td>';
-    html += '<td><strong>'+escH(it.nombre)+'</strong><br><span style="font-size:10px;color:#94a3b8">'+escH(it.categoria||'')+'</span></td>';
-    html += '<td class="c" style="font-weight:600">'+it.qty+'</td>';
-    html += '<td class="r">'+fmtCur(it.precioUnit)+'</td>';
-    if (hasDisc) html += '<td class="r" style="color:'+(disc>0?'#dc2626':'#ccc')+'">'+( disc>0 ? '-'+fmtCur(disc) : '—')+'</td>';
-    html += '<td class="r" style="font-weight:700">'+fmtCur(it.total)+'</td>';
+    var bg = i % 2 === 0 ? '#fff' : '#fafbfc';
+    html += '<tr style="background:'+bg+';border-bottom:1px solid #eee">';
+    html += '<td style="padding:6px 8px;color:#999">'+(i+1)+'</td>';
+    html += '<td style="padding:6px 8px;font-weight:500">'+escH(it.nombre)+'</td>';
+    html += '<td style="padding:6px 8px;text-align:center;font-weight:600">'+it.qty+'</td>';
+    html += '<td style="padding:6px 8px;text-align:right">'+fmtCur(it.precioUnit)+'</td>';
+    if (hasDisc) html += '<td style="padding:6px 8px;text-align:right;color:'+(disc>0?'#dc2626':'#ccc')+'">'+(disc>0?'-'+fmtCur(disc):'—')+'</td>';
+    html += '<td style="padding:6px 8px;text-align:right;font-weight:700">'+fmtCur(it.total)+'</td>';
     html += '</tr>';
   });
   html += '</tbody></table>';
 
-  // Totals
-  html += '<div class="pi-totals"><div class="pi-totals-box">';
-  html += '<div class="pi-totals-row"><span>Subtotal</span><strong>'+fmtCur(f.subtotal)+'</strong></div>';
+  // ── TOTALES (alineados a la derecha) ──
+  html += '<table style="margin-left:auto;min-width:240px;font-size:12px;border-collapse:collapse">';
+  html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;color:#666;border:none">Subtotal</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.subtotal)+'</td></tr>';
   if (f.descuento > 0) {
-    html += '<div class="pi-totals-row discount"><span>Descuento '+(f.descuentoTipo==='pct'?'('+f.descuentoValor+'%)':'')+'</span><strong>-'+fmtCur(f.descuento)+'</strong></div>';
-    html += '<div class="pi-totals-row"><span>Subtotal c/desc.</span><strong>'+fmtCur(f.subtotalConDescuento)+'</strong></div>';
+    html += '<tr style="border-bottom:1px solid #eee;color:#dc2626"><td style="padding:5px 12px;border:none">Descuento '+(f.descuentoTipo==='pct'?'('+f.descuentoValor+'%)':'')+'</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">-'+fmtCur(f.descuento)+'</td></tr>';
+    html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;border:none">Subtotal c/desc.</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.subtotalConDescuento)+'</td></tr>';
   }
-  html += '<div class="pi-totals-row"><span>IVA ('+f.taxPct+'%)</span><strong>'+fmtCur(f.tax)+'</strong></div>';
-  html += '<div class="pi-totals-row grand"><span>TOTAL</span><span>'+fmtCur(f.total)+'</span></div>';
-  html += '</div></div>';
+  html += '<tr style="border-bottom:1px solid #eee"><td style="padding:5px 12px;color:#666;border:none">IVA ('+f.taxPct+'%)</td><td style="padding:5px 12px;text-align:right;font-weight:600;border:none">'+fmtCur(f.tax)+'</td></tr>';
+  html += '<tr style="border-top:2px solid #059669"><td style="padding:8px 12px;font-size:16px;font-weight:800;color:#059669;border:none">TOTAL</td><td style="padding:8px 12px;text-align:right;font-size:16px;font-weight:800;color:#059669;border:none">'+fmtCur(f.total)+'</td></tr>';
+  html += '</table>';
 
-  // Payment info
+  // ── Pago ──
   if (f.pago && f.pago.metodo && f.pago.metodo !== 'no_especificado') {
-    html += '<div class="pi-payment"><strong>Forma de pago:</strong> '+(payLabels[f.pago.metodo]||f.pago.metodo);
+    html += '<div style="margin-top:14px;padding:8px 14px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px">';
+    html += '<strong>Forma de pago:</strong> '+(payLabels[f.pago.metodo]||f.pago.metodo);
     if (f.pago.metodo==='efectivo' && f.pago.montoRecibido) html += ' | Recibido: '+fmtCur(f.pago.montoRecibido)+' | Cambio: '+fmtCur(f.pago.cambio);
     if (f.pago.metodo==='transferencia') html += ' | '+(f.pago.banco||'')+' | Ref: '+(f.pago.referencia||'');
     if (f.pago.metodo==='credito') html += ' | Plazo: '+(f.pago.plazo||30)+' días';
     html += '</div>';
   }
 
-  // Shipping
+  // ── Envío ──
   if (f.envio && f.envio.destinatario) {
-    html += '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px">';
-    html += '<strong>Envío:</strong> '+escH(f.envio.destinatario)+' - '+escH(f.envio.direccion||'')+', '+escH(f.envio.ciudad||'');
+    html += '<div style="margin-top:8px;padding:8px 14px;background:#f0f9ff;border:1px solid #bae6fd;font-size:11px">';
+    html += '<strong>Envío:</strong> '+escH(f.envio.destinatario)+' — '+escH(f.envio.direccion||'')+', '+escH(f.envio.ciudad||'');
     if (f.envio.telefono) html += ' | Tel: '+escH(f.envio.telefono);
     if (f.envio.courier) html += ' | Courier: '+escH(f.envio.courier);
     if (f.envio.guia) html += ' | Guía: '+escH(f.envio.guia);
     html += '</div>';
   }
 
-  // Cotización extras (description + images)
+  // ── Cotización extras ──
   if (f.cotExtras) {
     if (f.cotExtras.descripcion) {
-      html += '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin-top:12px;font-size:12px">';
+      html += '<div style="margin-top:8px;padding:8px 14px;background:#fffbeb;border:1px solid #fcd34d;font-size:11px">';
       html += '<strong>Descripción adicional:</strong><br>';
-      html += '<div style="white-space:pre-wrap;margin-top:6px">'+escH(f.cotExtras.descripcion)+'</div>';
+      html += '<div style="white-space:pre-wrap;margin-top:4px">'+escH(f.cotExtras.descripcion)+'</div>';
       html += '</div>';
     }
     if (f.cotExtras.imagenes && f.cotExtras.imagenes.length > 0) {
-      html += '<div style="margin-top:12px;page-break-inside:avoid">';
-      html += '<strong style="font-size:12px">Imágenes adjuntas:</strong>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">';
+      html += '<div style="margin-top:8px;page-break-inside:avoid">';
+      html += '<strong style="font-size:11px">Imágenes adjuntas:</strong>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">';
       f.cotExtras.imagenes.forEach(function(img) {
-        html += '<img src="'+img+'" style="max-width:220px;max-height:180px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain">';
+        html += '<img src="'+img+'" style="max-width:200px;max-height:160px;border:1px solid #ddd;object-fit:contain">';
       });
       html += '</div></div>';
     }
   }
 
-  // Footer
-  html += '<div class="pi-footer">';
-  html += COMPANY.nombre+' | RUC: '+COMPANY.ruc+'<br>';
-  html += COMPANY.direccion+' | '+COMPANY.ciudad+'<br>';
-  html += COMPANY.tel+' | '+COMPANY.email+'<br>';
-  html += 'Gracias por su compra';
+  // ── Footer ──
+  html += '<div style="margin-top:24px;padding-top:10px;border-top:1px solid #ddd;text-align:center;font-size:9px;color:#999;line-height:1.6">';
+  html += COMPANY.nombre+' | RUC: '+COMPANY.ruc+' | '+COMPANY.direccion+', '+COMPANY.ciudad+'<br>';
+  html += COMPANY.tel+' | '+COMPANY.email+' | '+COMPANY.web+'<br>';
+  html += 'Gracias por su preferencia';
   html += '</div>';
 
   html += '</div>';
 
-  document.getElementById('printArea').innerHTML = html;
+  // Inject into printArea and trigger print
+  var pa = document.getElementById('printArea');
+  pa.innerHTML = html;
   closeModal('modalVerFact');
-  setTimeout(function() { window.print(); }, 300);
+  setTimeout(function() { window.print(); }, 400);
 }
 
 // ── ANULAR FACTURA ──────────────────────────────────────
