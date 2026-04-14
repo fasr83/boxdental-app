@@ -105,6 +105,11 @@ td{padding:8px 12px;vertical-align:middle}
 .it-qty input{width:68px;padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;
   text-align:center;font-size:14px;font-weight:700;outline:none}
 .it-qty input:focus{border-color:var(--pri)}
+.it-pvp{width:90px;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+.it-pvp .pvp-tag{background:#DBEAFE;color:#1E40AF;padding:2px 7px;border-radius:4px;font-weight:600;font-size:11px;display:inline-block}
+.it-disc{width:90px;text-align:center}
+.it-disc input{width:72px;padding:5px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;text-align:center;background:#FEF3C7;font-weight:600}
+.it-disc input:focus{border-color:#F59E0B;outline:none;box-shadow:0 0 0 2px rgba(245,158,11,.15)}
 .it-price{width:110px;text-align:right}
 .it-price input{width:90px;padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;
   text-align:right;font-size:13px;outline:none}
@@ -579,14 +584,16 @@ td{padding:8px 12px;vertical-align:middle}
           <th class="it-num">#</th>
           <th class="it-img">IMG</th>
           <th>PRODUCTO</th>
+          <th class="it-pvp" style="text-align:right">PVP SUG.</th>
           <th class="it-qty">CANT.</th>
           <th class="it-price" style="text-align:right">P. UNIT.</th>
+          <th class="it-disc no-print">DESC/U</th>
           <th class="it-total" style="text-align:right">TOTAL</th>
           <th class="it-del no-print"></th>
         </tr>
       </thead>
       <tbody id="itemsBody">
-        <tr><td colspan="7" class="no-items">Busca y agrega productos ☝</td></tr>
+        <tr><td colspan="9" class="no-items">Busca y agrega productos ☝</td></tr>
       </tbody>
     </table>
   </div>
@@ -1466,19 +1473,21 @@ function cargarEnvioDesdeFactura() {
 function renderShipProducts(items) {
   const container = document.getElementById('shipProductsTable');
   if (!items || items.length === 0) { container.style.display = 'none'; return; }
-  let html = '<table><thead><tr><th>#</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit</th><th style="text-align:right">Total</th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th>#</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit</th><th style="text-align:right">Desc/U</th><th style="text-align:right">Total</th></tr></thead><tbody>';
   items.forEach((it, i) => {
+    const disc = it.descUnit || 0;
     html += `<tr>
       <td style="text-align:center;color:var(--muted)">${i+1}</td>
       <td style="font-weight:500">${escH(it.nombre)}</td>
       <td style="text-align:center;font-weight:700">${it.qty}</td>
       <td style="text-align:right">${fmtCur(it.precioUnit)}</td>
+      <td style="text-align:right;color:${disc>0?'var(--red)':'var(--muted)'}">${disc>0?'-'+fmtCur(disc):'—'}</td>
       <td style="text-align:right;font-weight:600">${fmtCur(it.total)}</td>
     </tr>`;
   });
   const total = items.reduce((s,it)=>s+it.total, 0);
   html += `<tr style="background:#f0fdf4;font-weight:700;border-top:2px solid var(--green)">
-    <td colspan="4" style="text-align:right">TOTAL:</td>
+    <td colspan="5" style="text-align:right">TOTAL:</td>
     <td style="text-align:right;color:var(--green)">${fmtCur(total)}</td>
   </tr></tbody></table>`;
   container.innerHTML = html;
@@ -1842,8 +1851,8 @@ function cqApply(){
   if(typeof setDocType==='function')setDocType('cotizacion');
   accepted.forEach(function(m){
     var prod=m.matchedProduct, existIdx=currentItems.findIndex(function(it){return it.id===prod.id;});
-    if(existIdx>=0){currentItems[existIdx].qty+=m.qty;currentItems[existIdx].total=currentItems[existIdx].qty*currentItems[existIdx].precioUnit;}
-    else {var precio=m.customPrice!=null?m.customPrice:getPrecio(prod.id);currentItems.push({id:prod.id,nombre:prod.nombre,categoria:prod.categoria,qty:m.qty,precioUnit:precio,total:m.qty*precio});}
+    if(existIdx>=0){currentItems[existIdx].qty+=m.qty;currentItems[existIdx].total=currentItems[existIdx].qty*(currentItems[existIdx].precioUnit-(currentItems[existIdx].descUnit||0));}
+    else {var precio=m.customPrice!=null?m.customPrice:getPrecio(prod.id);currentItems.push({id:prod.id,nombre:prod.nombre,categoria:prod.categoria,qty:m.qty,precioUnit:precio,precioSugerido:getPrecio(prod.id),descUnit:0,total:m.qty*precio});}
   });
   renderItems();recalcTotals();closeCotRapida();
   showToast('✅ '+accepted.length+' productos agregados a la cotización','ok');
@@ -2011,16 +2020,19 @@ function addItem(id) {
   const existing = currentItems.find(i => i.id === id);
   if (existing) {
     existing.qty += 1;
-    existing.total = existing.qty * existing.precioUnit;
+    existing.total = existing.qty * (existing.precioUnit - (existing.descUnit || 0));
   } else {
     const p = getProd(id);
+    const precio = getPrecio(p.id);
     currentItems.push({
       id: p.id,
       nombre: getNombre(p.id),
       categoria: p.categoria,
       qty: 1,
-      precioUnit: getPrecio(p.id),
-      total: getPrecio(p.id)
+      precioUnit: precio,
+      precioSugerido: precio,
+      descUnit: 0,
+      total: precio
     });
   }
   renderItems();
@@ -2037,7 +2049,7 @@ function updateItemQty(idx, val) {
   const n = parseInt(val);
   if (isNaN(n) || n < 1) return;
   currentItems[idx].qty = n;
-  currentItems[idx].total = n * currentItems[idx].precioUnit;
+  currentItems[idx].total = n * (currentItems[idx].precioUnit - (currentItems[idx].descUnit || 0));
   renderItems();
   recalcTotals();
 }
@@ -2046,7 +2058,17 @@ function updateItemPrice(idx, val) {
   const n = parseFloat(val);
   if (isNaN(n) || n < 0) return;
   currentItems[idx].precioUnit = n;
-  currentItems[idx].total = currentItems[idx].qty * n;
+  currentItems[idx].total = currentItems[idx].qty * (n - (currentItems[idx].descUnit || 0));
+  renderItems();
+  recalcTotals();
+}
+
+function updateItemDisc(idx, val) {
+  const n = parseFloat(val);
+  if (isNaN(n) || n < 0) return;
+  const it = currentItems[idx];
+  it.descUnit = Math.min(n, it.precioUnit);
+  it.total = it.qty * (it.precioUnit - it.descUnit);
   renderItems();
   recalcTotals();
 }
@@ -2055,7 +2077,7 @@ function updateItemPrice(idx, val) {
 function renderItems() {
   const tbody = document.getElementById('itemsBody');
   if (currentItems.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-items">Busca y agrega productos ☝</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="no-items">Busca y agrega productos ☝</td></tr>';
     return;
   }
   tbody.innerHTML = currentItems.map((it, i) => {
@@ -2063,12 +2085,16 @@ function renderItems() {
     const stockWarn = it.qty > stock ? ' style="color:var(--red);font-weight:700"' : '';
     const img = (extras[it.id] && extras[it.id].imagen) ? extras[it.id].imagen : null;
     const imgHtml = img ? `<img src="${img}" alt="">` : `<span class="no-img-sm">📦</span>`;
+    const pvp = it.precioSugerido || getPrecio(it.id);
+    const disc = it.descUnit || 0;
     return `<tr>
       <td class="it-num">${i+1}</td>
       <td class="it-img">${imgHtml}</td>
       <td class="it-name">${escH(it.nombre)}<small>${escH(it.categoria)}${it.qty > stock ? ' — ⚠️ Stock insuficiente ('+stock+')' : ''}</small></td>
+      <td class="it-pvp"><span class="pvp-tag">${fmtCur(pvp)}</span></td>
       <td class="it-qty"><input type="number" min="1" value="${it.qty}" onchange="updateItemQty(${i},this.value)" onfocus="this.select()"${stockWarn}></td>
       <td class="it-price"><input type="number" min="0" step="0.01" value="${it.precioUnit.toFixed(2)}" onchange="updateItemPrice(${i},this.value)" onfocus="this.select()"></td>
+      <td class="it-disc no-print"><input type="number" min="0" step="0.01" value="${disc.toFixed(2)}" onchange="updateItemDisc(${i},this.value)" onfocus="this.select()" placeholder="0.00"></td>
       <td class="it-total">${fmtCur(it.total)}</td>
       <td class="it-del no-print"><button onclick="removeItem(${i})" title="Quitar">✕</button></td>
     </tr>`;
@@ -2337,14 +2363,17 @@ function verFactura(idx) {
         <th style="padding:8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">Producto</th>
         <th style="padding:8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">Cant.</th>
         <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">P.Unit.</th>
+        <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">Desc/U</th>
         <th style="padding:8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">Total</th>
       </tr></thead><tbody>`;
   f.items.forEach((it, i) => {
+    const disc = it.descUnit || 0;
     html += `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 8px;color:var(--muted)">${i+1}</td>
       <td style="padding:7px 8px;font-weight:500">${escH(it.nombre)}</td>
       <td style="padding:7px 8px;text-align:center">${it.qty}</td>
       <td style="padding:7px 8px;text-align:right">${fmtCur(it.precioUnit)}</td>
+      <td style="padding:7px 8px;text-align:right;color:${disc>0?'var(--red)':'var(--muted)'}">${disc>0?'-'+fmtCur(disc):'—'}</td>
       <td style="padding:7px 8px;text-align:right;font-weight:600">${fmtCur(it.total)}</td>
     </tr>`;
   });

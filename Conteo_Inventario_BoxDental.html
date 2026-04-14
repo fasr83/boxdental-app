@@ -329,6 +329,7 @@ td{padding:6px 10px;vertical-align:middle}
     <button class="btn btn-w" onclick="exportJSON()">💾 Guardar JSON</button>
     <button class="btn btn-w" onclick="importJSON()">📂 Cargar JSON</button>
     <button class="btn btn-w" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <button class="btn" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;font-weight:700;border:none" onclick="importExcel()">📥 Importar Excel</button>
     <button class="btn btn-success" onclick="showResumen()">📊 Resumen</button>
     <button class="btn btn-danger" onclick="openReset()">🗑 Reiniciar</button>
   </div>
@@ -586,8 +587,63 @@ td{padding:6px 10px;vertical-align:middle}
 </div>
 </div>
 
+<!-- MODAL IMPORTAR EXCEL -->
+<div class="overlay" id="modalExcel">
+<div class="modal" style="max-width:750px">
+  <h2>📥 Importar Excel a Inventario</h2>
+  <div id="excelDropzone" style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px" onclick="document.getElementById('excelFileInput').click()">
+    <div style="font-size:2.5rem;margin-bottom:8px">📁</div>
+    <div style="font-weight:600;font-size:14px;color:var(--text)">Arrastra tu archivo Excel aquí o haz clic para seleccionar</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px">Formatos: .xlsx, .xls, .csv</div>
+    <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="excelFileSelected(this)">
+  </div>
+  <div id="excelInfo" style="display:none">
+    <div style="background:#f0fdf4;border:1px solid #BBF7D0;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px">
+      <strong id="excelFileName"></strong><br>
+      <span id="excelSummary" style="color:var(--muted)"></span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+      <strong>Mapeo de columnas detectado:</strong> El sistema busca columnas como: PRODUCTO/NOMBRE, CANTIDAD/STOCK/QTY, COSTO/PRECIO_COSTO, PRECIO/PVP/PRECIO_VENTA, CATEGORÍA, LOTE, PROVEEDOR
+    </div>
+    <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="excelPreviewTable"></table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+        <input type="checkbox" id="excelUpdateQty" checked style="accent-color:var(--primary);width:16px;height:16px"> Actualizar cantidades
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+        <input type="checkbox" id="excelUpdateCost" checked style="accent-color:var(--primary);width:16px;height:16px"> Actualizar costos
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+        <input type="checkbox" id="excelUpdatePrice" checked style="accent-color:var(--primary);width:16px;height:16px"> Actualizar precios
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+        <input type="checkbox" id="excelAddNew" checked style="accent-color:var(--green);width:16px;height:16px"> Crear productos nuevos
+      </label>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalExcel')">Cancelar</button>
+    <button class="btn btn-success" id="excelApplyBtn" style="display:none" onclick="applyExcelImport()">✅ Aplicar Importación</button>
+  </div>
+</div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<script>
+// ── SheetJS CDN (async) ─────────────────────────────────
+(function(){
+  var s = document.createElement('script');
+  s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.async = true;
+  s.onload = function(){ console.log('SheetJS loaded'); };
+  s.onerror = function(){ console.warn('SheetJS CDN failed'); };
+  document.head.appendChild(s);
+})();
+</script>
 
 <script>
 
@@ -1539,6 +1595,240 @@ function toast(msg, type='') {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = 'toast show' + (type ? ' '+type : '');
   setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── IMPORTAR EXCEL ──────────────────────────────────────
+let excelParsedRows = [];
+let excelColMap = {};
+
+function importExcel() {
+  if (typeof XLSX === 'undefined') {
+    toast('⏳ Cargando librería Excel, intenta en 3 segundos...', 'err');
+    return;
+  }
+  document.getElementById('excelFileInput').value = '';
+  document.getElementById('excelInfo').style.display = 'none';
+  document.getElementById('excelApplyBtn').style.display = 'none';
+  excelParsedRows = [];
+  excelColMap = {};
+  document.getElementById('modalExcel').classList.add('open');
+}
+
+// Drag & drop
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    var dz = document.getElementById('excelDropzone');
+    if (!dz) return;
+    dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.style.borderColor='var(--primary)'; dz.style.background='#EEF2FF'; });
+    dz.addEventListener('dragleave', function(){ dz.style.borderColor='var(--border)'; dz.style.background=''; });
+    dz.addEventListener('drop', function(e){
+      e.preventDefault(); dz.style.borderColor='var(--border)'; dz.style.background='';
+      if (e.dataTransfer.files.length) processExcelFile(e.dataTransfer.files[0]);
+    });
+  });
+})();
+
+function excelFileSelected(input) {
+  if (input.files.length) processExcelFile(input.files[0]);
+}
+
+function normalizeCol(s) {
+  return s.toString().trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Z0-9_]/g,'_');
+}
+
+function processExcelFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if (rows.length === 0) { toast('⚠️ El archivo está vacío','err'); return; }
+
+      // Detect column mapping
+      var headers = Object.keys(rows[0]);
+      var colMap = {};
+      headers.forEach(function(h) {
+        var n = normalizeCol(h);
+        if (!colMap.nombre && /^(PRODUCTO|NOMBRE|ITEM|DESCRIPCION|NAME|ARTICULO)/.test(n)) colMap.nombre = h;
+        if (!colMap.qty && /^(CANTIDAD|STOCK|QTY|QUANTITY|CANT|UNIDADES|CONTEO)/.test(n)) colMap.qty = h;
+        if (!colMap.costo && /^(COSTO|PRECIO_COSTO|COST|COSTO_UNIT|P_COSTO)/.test(n)) colMap.costo = h;
+        if (!colMap.precio && /^(PRECIO|PVP|PRECIO_VENTA|PRICE|P_VENTA|PRECIO_UNIT)/.test(n)) colMap.precio = h;
+        if (!colMap.categoria && /^(CATEGORIA|CATEGORY|CAT|TIPO|LINEA)/.test(n)) colMap.categoria = h;
+        if (!colMap.lote && /^(LOTE|LOT|BATCH|NUMERO_LOTE)/.test(n)) colMap.lote = h;
+        if (!colMap.proveedor && /^(PROVEEDOR|SUPPLIER|VENDOR|PROVIDER)/.test(n)) colMap.proveedor = h;
+        if (!colMap.id && /^(ID|CODIGO|CODE|SKU|COD)$/.test(n)) colMap.id = h;
+      });
+
+      if (!colMap.nombre && !colMap.id) {
+        toast('❌ No se detectó columna de PRODUCTO o ID','err');
+        return;
+      }
+
+      excelParsedRows = rows;
+      excelColMap = colMap;
+
+      // Match rows to existing products
+      var allP = getAllProds();
+      var matched = 0, notFound = 0;
+      rows.forEach(function(r) {
+        r._match = null;
+        // Try ID first
+        if (colMap.id && r[colMap.id]) {
+          var id = parseInt(r[colMap.id]);
+          var found = allP.find(function(p){ return p.id === id; });
+          if (found) { r._match = found; matched++; return; }
+        }
+        // Try name fuzzy
+        if (colMap.nombre && r[colMap.nombre]) {
+          var name = r[colMap.nombre].toString().trim().toLowerCase();
+          if (!name) { notFound++; return; }
+          var best = null, bestScore = 0;
+          allP.forEach(function(p) {
+            var pName = getNombre(p.id).toLowerCase();
+            // Exact match
+            if (pName === name) { best = p; bestScore = 1; return; }
+            // Contains
+            if (bestScore < 0.8 && (pName.includes(name) || name.includes(pName))) {
+              best = p; bestScore = 0.8;
+            }
+            // Word overlap
+            if (bestScore < 0.6) {
+              var words1 = name.split(/\s+/);
+              var words2 = pName.split(/\s+/);
+              var common = words1.filter(function(w){ return w.length > 2 && words2.some(function(w2){ return w2.includes(w) || w.includes(w2); }); });
+              var score = common.length / Math.max(words1.length, words2.length);
+              if (score > bestScore && score >= 0.4) { best = p; bestScore = score; }
+            }
+          });
+          if (best) { r._match = best; r._score = bestScore; matched++; }
+          else { notFound++; }
+        } else { notFound++; }
+      });
+
+      // Show info
+      document.getElementById('excelFileName').textContent = '📄 ' + file.name;
+      document.getElementById('excelSummary').textContent = rows.length + ' filas · ' + matched + ' productos encontrados · ' + notFound + ' sin match';
+      document.getElementById('excelInfo').style.display = 'block';
+      document.getElementById('excelApplyBtn').style.display = '';
+
+      // Preview table
+      var tbl = document.getElementById('excelPreviewTable');
+      var html = '<thead><tr style="background:#f8fafc;position:sticky;top:0">';
+      html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px">ESTADO</th>';
+      html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px">PRODUCTO EXCEL</th>';
+      html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px">MATCH EN BD</th>';
+      if (colMap.qty) html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px;text-align:center">CANT.</th>';
+      if (colMap.costo) html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px;text-align:right">COSTO</th>';
+      if (colMap.precio) html += '<th style="padding:7px 8px;border:1px solid var(--border);font-size:11px;text-align:right">PRECIO</th>';
+      html += '</tr></thead><tbody>';
+
+      rows.slice(0, 100).forEach(function(r) {
+        var excelName = colMap.nombre ? r[colMap.nombre] : (colMap.id ? 'ID: '+r[colMap.id] : '—');
+        var matchName = r._match ? getNombre(r._match.id) : '—';
+        var statusIcon = r._match ? (r._score && r._score < 0.9 ? '🟡' : '✅') : '🔴';
+        var statusText = r._match ? (r._score && r._score < 0.9 ? 'Parcial' : 'Exacto') : 'Nuevo';
+        var bg = r._match ? '' : 'background:#FEF3C7;';
+        html += '<tr style="border-bottom:1px solid var(--border);'+bg+'">';
+        html += '<td style="padding:6px 8px;font-size:11px;text-align:center">' + statusIcon + ' ' + statusText + '</td>';
+        html += '<td style="padding:6px 8px;font-size:12px;font-weight:500">' + escH(excelName.toString()) + '</td>';
+        html += '<td style="padding:6px 8px;font-size:12px;color:' + (r._match ? 'var(--green)' : 'var(--red)') + '">' + escH(matchName) + '</td>';
+        if (colMap.qty) html += '<td style="padding:6px 8px;font-size:12px;text-align:center;font-weight:600">' + (r[colMap.qty] || '—') + '</td>';
+        if (colMap.costo) html += '<td style="padding:6px 8px;font-size:12px;text-align:right">' + (r[colMap.costo] ? '$'+parseFloat(r[colMap.costo]).toFixed(4) : '—') + '</td>';
+        if (colMap.precio) html += '<td style="padding:6px 8px;font-size:12px;text-align:right">' + (r[colMap.precio] ? '$'+parseFloat(r[colMap.precio]).toFixed(2) : '—') + '</td>';
+        html += '</tr>';
+      });
+      if (rows.length > 100) html += '<tr><td colspan="6" style="padding:8px;text-align:center;color:var(--muted);font-size:12px">... y ' + (rows.length-100) + ' filas más</td></tr>';
+      html += '</tbody>';
+      tbl.innerHTML = html;
+
+    } catch(err) {
+      toast('❌ Error al leer el archivo: ' + err.message, 'err');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function applyExcelImport() {
+  if (excelParsedRows.length === 0) return;
+  var colMap = excelColMap;
+  var updateQty = document.getElementById('excelUpdateQty').checked;
+  var updateCost = document.getElementById('excelUpdateCost').checked;
+  var updatePrice = document.getElementById('excelUpdatePrice').checked;
+  var addNew = document.getElementById('excelAddNew').checked;
+  var updated = 0, created = 0, skipped = 0;
+
+  excelParsedRows.forEach(function(r) {
+    if (r._match) {
+      // Update existing product
+      var id = r._match.id;
+      if (!extras[id]) extras[id] = {};
+
+      if (updateQty && colMap.qty && r[colMap.qty] !== '' && r[colMap.qty] !== undefined) {
+        var q = parseFloat(r[colMap.qty]);
+        if (!isNaN(q) && q >= 0) conteos[id] = q;
+      }
+      if (updateCost && colMap.costo && r[colMap.costo] !== '' && r[colMap.costo] !== undefined) {
+        var c = parseFloat(r[colMap.costo]);
+        if (!isNaN(c) && c >= 0) extras[id].costo = c;
+      }
+      if (updatePrice && colMap.precio && r[colMap.precio] !== '' && r[colMap.precio] !== undefined) {
+        var p = parseFloat(r[colMap.precio]);
+        if (!isNaN(p) && p >= 0) {
+          // Update precio in the product - for custom products we can modify directly
+          if (isCustom(id)) {
+            var cp = customProducts.find(function(x){ return x.id === id; });
+            if (cp) cp.precio = p;
+          }
+          // Store in extras for reference
+          extras[id].precioVenta = p;
+        }
+      }
+      if (colMap.lote && r[colMap.lote]) extras[id].lote = r[colMap.lote].toString();
+      if (colMap.proveedor && r[colMap.proveedor]) {
+        var provName = r[colMap.proveedor].toString().trim();
+        extras[id].proveedor = provName;
+        if (provName && proveedores.indexOf(provName) === -1) proveedores.push(provName);
+      }
+      updated++;
+    } else if (addNew && colMap.nombre && r[colMap.nombre]) {
+      // Create new product
+      var nombre = r[colMap.nombre].toString().trim();
+      if (!nombre) { skipped++; return; }
+      var costo = colMap.costo ? parseFloat(r[colMap.costo]) || 0 : 0;
+      var precio = colMap.precio ? parseFloat(r[colMap.precio]) || 0 : 0;
+      if (precio === 0 && costo > 0) precio = Math.round(costo * 1.4 * 100) / 100;
+      var cat = colMap.categoria ? (r[colMap.categoria] || 'IMPORTADO').toString().trim().toUpperCase() : 'IMPORTADO';
+
+      var newId = nextCustomId++;
+      customProducts.push({ id: newId, nombre: nombre, categoria: cat, costo: costo, precio: precio });
+
+      if (colMap.qty && r[colMap.qty] !== '' && r[colMap.qty] !== undefined) {
+        var qty = parseFloat(r[colMap.qty]);
+        if (!isNaN(qty) && qty >= 0) conteos[newId] = qty;
+      }
+      extras[newId] = {};
+      if (colMap.lote && r[colMap.lote]) extras[newId].lote = r[colMap.lote].toString();
+      if (colMap.proveedor && r[colMap.proveedor]) {
+        var prov = r[colMap.proveedor].toString().trim();
+        extras[newId].proveedor = prov;
+        if (prov && proveedores.indexOf(prov) === -1) proveedores.push(prov);
+      }
+      created++;
+    } else {
+      skipped++;
+    }
+  });
+
+  saveData();
+  buildCatFilter();
+  render();
+  updateStats();
+  closeModal('modalExcel');
+  toast('✅ Importación completada: ' + updated + ' actualizados, ' + created + ' nuevos, ' + skipped + ' omitidos', 'ok');
 }
 
 init();
