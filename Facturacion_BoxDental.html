@@ -413,6 +413,7 @@ td{padding:8px 12px;vertical-align:middle}
 
 </style>
 <script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
 </head>
 <body>
 
@@ -1876,6 +1877,25 @@ function init() {
   setupClientAutocomplete();
   updateClientDataLists();
 
+  // Register Firebase sync
+  if (window.BXD_FB) {
+    BXD_FB.load(SK_FACT, function(data) {
+      if (data.facturas) facturas = data.facturas;
+      if (data.nextFactura) nextFactura = data.nextFactura;
+      if (data.clientes) clientes = data.clientes;
+      if (data.taxPct) { taxPct = data.taxPct; document.getElementById('taxRate').value = taxPct; }
+      updateFactNum(); renderHistorial(); renderClientesSaved(); updateClientDataLists();
+      showToast('☁️ Datos sincronizados desde la nube','ok');
+    });
+    BXD_FB.load(SK_INV, function(data) {
+      if (data.conteos) conteos = data.conteos;
+      if (data.extras) extras = data.extras;
+      if (data.proveedores) proveedores = data.proveedores;
+      if (data.customProducts) customProducts = data.customProducts;
+      if (data.nextCustomId) nextCustomId = data.nextCustomId;
+    });
+  }
+
   // Product search
   const inp = document.getElementById('prodSearch');
   inp.addEventListener('input', function() {
@@ -1995,6 +2015,13 @@ function saveFactData() {
 function saveAll() {
   saveInvData();
   saveFactData();
+  // Sync to Firebase
+  if (window.BXD_FB) {
+    var invData = { conteos, extras, proveedores, customProducts, nextCustomId, savedAt: new Date().toISOString() };
+    var factData = { facturas, nextFactura, clientes, taxPct: parseFloat(document.getElementById('taxRate').value)||15, savedAt: new Date().toISOString() };
+    BXD_FB.save(SK_INV, invData);
+    BXD_FB.save(SK_FACT, factData);
+  }
   setSaving(false);
   document.getElementById('lastSaved').textContent = 'Guardado: ' + new Date().toLocaleTimeString('es-EC');
 }

@@ -158,6 +158,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
 
 </style>
 <script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
 </head>
 <body>
 
@@ -506,6 +507,7 @@ function loadAll(){
 function saveRptData(){
   const d={notasCD,remisiones,pagosRecibidos,compras:compras||[],nextNotaCD,nextRemision,nextPago,nextCompra:nextCompra||1,savedAt:new Date().toISOString()};
   try{if(lsOk())localStorage.setItem(SK_RPT,JSON.stringify(d));sessionStorage.setItem(SK_RPT,JSON.stringify(d));}catch(e){}
+  if(window.BXD_FB)BXD_FB.save(SK_RPT,d);
 }
 
 // ── TABS ─────────────────────────────────────────────────
@@ -528,6 +530,24 @@ function switchTab(id){
 // ── INIT ─────────────────────────────────────────────────
 function initApp(){
   loadAll();
+  // Firebase sync
+  if(window.BXD_FB){
+    BXD_FB.load(SK_RPT,function(d){
+      if(d.notasCD)notasCD=d.notasCD;if(d.remisiones)remisiones=d.remisiones;
+      if(d.pagosRecibidos)pagosRecibidos=d.pagosRecibidos;if(d.compras)compras=d.compras;
+      if(d.nextNotaCD)nextNotaCD=d.nextNotaCD;if(d.nextRemision)nextRemision=d.nextRemision;
+      if(d.nextPago)nextPago=d.nextPago;if(d.nextCompra)nextCompra=d.nextCompra;
+      switchTab('dashboard');
+    });
+    BXD_FB.load(SK_FACT,function(d){
+      if(d.facturas)facturas=d.facturas;if(d.nextFactura)nextFactura=d.nextFactura;
+      if(d.clientes)clientes=d.clientes;switchTab('dashboard');
+    });
+    BXD_FB.load(SK_INV,function(d){
+      if(d.conteos)conteos=d.conteos;if(d.extras)extras=d.extras;
+      if(d.customProducts)customProducts=d.customProducts;if(d.proveedores)proveedores=d.proveedores;
+    });
+  }
   // Set date defaults
   const y=new Date().getFullYear();
   document.getElementById('vFechaDesde').value=y+'-01-01';

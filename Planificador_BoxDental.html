@@ -210,6 +210,7 @@ input[type=range]{accent-color:#8B5CF6;padding:0}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 </style>
 <script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
 </head>
 <body>
 
@@ -447,8 +448,8 @@ function load(){
   try{progress=JSON.parse(localStorage.getItem(PKEY))||[];}catch(e){progress=[];}
   DEF_PROG.forEach(d=>{if(!progress.find(p=>p.id===d.id))progress.push({...d});});
 }
-function save(){ localStorage.setItem(TKEY,JSON.stringify(tasks)); }
-function saveProg(){ localStorage.setItem(PKEY,JSON.stringify(progress)); }
+function save(){ localStorage.setItem(TKEY,JSON.stringify(tasks)); if(window.BXD_FB)BXD_FB.save(TKEY,{tasks:tasks,savedAt:new Date().toISOString()}); }
+function saveProg(){ localStorage.setItem(PKEY,JSON.stringify(progress)); if(window.BXD_FB)BXD_FB.save(PKEY,{progress:progress,savedAt:new Date().toISOString()}); }
 
 function fmtDate(dk){
   const d=new Date(dk+'T12:00:00');
@@ -1270,6 +1271,16 @@ updateBackupBar();
 renderDash();
 setInterval(updateNav,60000);
 setInterval(autoBackup,300000); // Auto-backup cada 5 minutos
+
+// Firebase sync
+if(window.BXD_FB){
+  BXD_FB.load(TKEY,function(data){
+    if(data.tasks){tasks=data.tasks;seed();renderDash();toast('☁️ Tareas sincronizadas','ok');}
+  });
+  BXD_FB.load(PKEY,function(data){
+    if(data.progress){progress=data.progress;DEF_PROG.forEach(function(d){if(!progress.find(function(p){return p.id===d.id;}))progress.push(Object.assign({},d));});renderDash();}
+  });
+}
 </script>
 </body>
 </html>

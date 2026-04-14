@@ -193,6 +193,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;ba
 }
 </style>
 <script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
 </head>
 <body>
 
@@ -295,6 +296,8 @@ function saveState() {
   localStorage.setItem(KEY, JSON.stringify(state));
   const now = new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
   localStorage.setItem(KEY+'_lastSave', now);
+  // Sync to Firebase
+  if (window.BXD_FB) BXD_FB.save(KEY, {state: state, savedAt: new Date().toISOString()});
   updateStats();
   updateBackupBar();
 }
@@ -790,6 +793,13 @@ loadState();
 updateStats();
 renderCards();
 updateBackupBar();
+
+// Firebase sync
+if(window.BXD_FB){
+  BXD_FB.load(KEY,function(data){
+    if(data.state){state=data.state;CLIENTS.forEach(function(c){if(!state[c.id])state[c.id]={status:'sin_contactar',metodo:'',notas:'',valor:'',checked:false,fecha:'',primerContacto:'',historial:[]};});updateStats();renderCards();}
+  });
+}
 
 // Aviso al cerrar si no hay backup reciente
 window.addEventListener('beforeunload', function(e) {

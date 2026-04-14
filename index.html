@@ -87,6 +87,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
+<script src="firebase-sync.js"></script>
 <script>
 // ═══ CREDENTIALS & ROLES ═══
 // role: 'admin' = acceso total | 'subadmin' = solo inventario, facturación, reportes
@@ -126,11 +127,16 @@ function doLogin() {
   }
 
   // Save session with role
-  const session = { user: user, name: u.name, role: u.role, ts: Date.now() };
+  const session = { user: user, name: u.name, role: u.role, ts: Date.now(), fbPass: pass };
   if (remember) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+  // Firebase sign-in (non-blocking)
+  if (window.BXD_FB && BXD_FB.signIn) {
+    BXD_FB.signIn(user, pass).catch(function(e) { console.warn('[BXD_FB] Auth:', e.message); });
+  }
 
   showApp(u.name, u.role);
 }
@@ -170,6 +176,7 @@ function showApp(name, role) {
 }
 
 function doLogout() {
+  if (window.BXD_FB && BXD_FB.signOut) BXD_FB.signOut();
   localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('mainContent').style.display = 'none';

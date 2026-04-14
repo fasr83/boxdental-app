@@ -263,6 +263,7 @@ td{padding:6px 10px;vertical-align:middle}
 
 </style>
 <script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
 </head>
 <body>
 
@@ -932,6 +933,19 @@ function init() {
   render();
   updateStats();
 
+  // Register Firebase sync — reload data if cloud has newer version
+  if (window.BXD_FB) {
+    BXD_FB.load(SK, function(data) {
+      if (data.conteos) conteos = data.conteos;
+      if (data.extras) extras = data.extras;
+      if (data.proveedores) proveedores = data.proveedores;
+      if (data.customProducts) customProducts = data.customProducts;
+      if (data.nextCustomId) nextCustomId = data.nextCustomId;
+      buildCatFilter(); render(); updateStats();
+      toast('☁️ Datos sincronizados desde la nube', 'ok');
+    });
+  }
+
   // Search - use addEventListener to avoid inline handler issues
   document.getElementById('searchInput').addEventListener('input', function() {
     render();
@@ -974,6 +988,8 @@ function saveData() {
     const f = new Date();
     document.getElementById('lastSaved').textContent =
       'Guardado: ' + f.toLocaleTimeString('es-EC');
+    // Sync to Firebase
+    if (window.BXD_FB) BXD_FB.save(SK, data);
   } catch(e) {
     document.getElementById('lastSaved').textContent = '⚠️ Error al guardar — usa 💾 Guardar JSON';
     toast('⚠️ localStorage bloqueado, usa Guardar JSON', 'err');
