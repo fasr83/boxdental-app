@@ -2514,10 +2514,10 @@ function verFactura(idx) {
   let html = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
       <div><div style="display:flex;align-items:center;gap:12px">
-        <img src="'+LOGO_B64+'" alt="" style="height:45px">
-        <div><h2 style="margin:0;color:var(--pri)">BOXDENTAL ECUADOR</h2>
+        <img src="${LOGO_B64}" alt="" style="height:45px">
+        <div><h2 style="margin:0;color:var(--pri)">${COMPANY.nombre}</h2>
           <p style="font-size:11px;color:var(--muted)">${f.tipoDocLabel||"NOTA DE VENTA"}</p>
-          <p style="font-size:10px;color:var(--muted)">'+COMPANY.direccion+'<br>📞 '+COMPANY.tel+' · RUC: '+COMPANY.ruc+'<br>✉ '+COMPANY.email+' · 🌐 '+COMPANY.web+'</p>
+          <p style="font-size:10px;color:var(--muted)">${COMPANY.direccion}<br>📞 ${COMPANY.tel} · RUC: ${COMPANY.ruc}<br>✉ ${COMPANY.email} · 🌐 ${COMPANY.web}</p>
         </div></div></div>
       <div style="text-align:right">
         <div style="font-size:24px;font-weight:800;color:var(--pri)">${f.tipoDocPrefix||"NV"}-${fmtNum(f.numero)}</div>
