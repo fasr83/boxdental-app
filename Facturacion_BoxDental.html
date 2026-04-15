@@ -917,10 +917,11 @@ td{padding:8px 12px;vertical-align:middle}
 <div class="overlay" id="modalVerFact">
 <div class="modal" style="max-width:700px">
   <div id="verFactContent"></div>
-  <div class="modal-footer">
+  <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
     <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalVerFact')">Cerrar</button>
-    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'A4')" style="background:#1a56db">🖨 Imprimir A4</button>
-    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'80mm')" style="background:#059669">🧾 Ticket 80mm</button>
+    <div id="modalConvertBtns" style="display:flex;gap:6px"></div>
+    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'A4')" style="background:#1a56db">🖨 A4</button>
+    <button class="btn btn-pri" onclick="printFactura(currentViewIdx,'80mm')" style="background:#059669">🧾 80mm</button>
   </div>
 </div>
 </div>
@@ -2445,6 +2446,62 @@ function setHistFilter(type) {
   renderHistorial();
 }
 
+// ── CONVERTIR DOCUMENTO (Cotización → NV → Factura) ────
+function convertirDoc(idx, destino) {
+  var f = facturas[idx];
+  if (!f) return;
+  var destCfg = docTypeConfig[destino];
+  var origenLabel = (f.tipoDocPrefix||'NV') + '-' + fmtNum(f.numero);
+  if (!confirm('¿Convertir ' + origenLabel + ' a ' + destCfg.label + '?')) return;
+
+  // Create new document based on the original
+  var nuevo = {
+    numero: nextFactura,
+    fecha: today(),
+    cliente: JSON.parse(JSON.stringify(f.cliente)),
+    items: f.items.map(function(it){ return JSON.parse(JSON.stringify(it)); }),
+    subtotal: f.subtotal,
+    descuento: f.descuento,
+    descuentoTipo: f.descuentoTipo,
+    descuentoValor: f.descuentoValor,
+    subtotalConDescuento: f.subtotalConDescuento,
+    taxPct: f.taxPct,
+    tax: f.tax,
+    total: f.total,
+    tipoDoc: destino === 'factura' ? 'factura' : 'nota',
+    tipoDocLabel: destCfg.label,
+    tipoDocPrefix: destCfg.prefix,
+    estado: 'EMITIDA',
+    emitidaAt: new Date().toISOString(),
+    pago: f.pago ? JSON.parse(JSON.stringify(f.pago)) : {metodo:'no_especificado'},
+    envio: f.envio ? JSON.parse(JSON.stringify(f.envio)) : null,
+    cotExtras: f.cotExtras ? JSON.parse(JSON.stringify(f.cotExtras)) : null,
+    origenDoc: origenLabel,
+    origenIdx: f.numero
+  };
+
+  // Only deduct inventory if converting FROM cotización (cotizaciones don't deduct stock)
+  // Notas de venta already deducted stock, so converting NV→FA should NOT deduct again
+  if (f.tipoDoc === 'cotizacion') {
+    nuevo.items.forEach(function(it) {
+      var current = getStock(it.id);
+      conteos[it.id] = Math.max(0, current - it.qty);
+    });
+  }
+
+  // Mark original as converted
+  f.estado = 'CONVERTIDA';
+  f.convertidoA = destCfg.prefix + '-' + fmtNum(nextFactura);
+  f.convertidoAt = new Date().toISOString();
+
+  facturas.unshift(nuevo);
+  nextFactura++;
+  saveAll();
+  updateFactNum();
+  renderHistorial();
+  showToast('✅ ' + origenLabel + ' convertido a ' + destCfg.prefix + '-' + fmtNum(nuevo.numero), 'ok');
+}
+
 function renderHistorial() {
   const list = document.getElementById('historialList');
   const count = document.getElementById('histCount');
@@ -2485,12 +2542,26 @@ function renderHistorial() {
     var anulada = f.estado === 'ANULADA';
     var typeColors = {nota:'#059669',factura:'#1a56db',cotizacion:'#d97706'};
     var typeColor = typeColors[f.tipoDoc] || '#64748b';
+    // Estado badge
+    var estadoColors = {EMITIDA:'#3b82f6',APROBADA:'#059669',FACTURADA:'#8b5cf6',ANULADA:'#dc2626',CONVERTIDA:'#8b5cf6'};
+    var estadoBadge = '<span style="font-size:9px;font-weight:700;color:#fff;background:'+(estadoColors[f.estado]||'#64748b')+';padding:1px 6px;border-radius:3px;margin-left:4px">'+(f.estado||'EMITIDA')+'</span>';
+    // Conversion badges
+    var convBadge = '';
+    if (f.convertidoA) convBadge = '<div style="font-size:9px;color:#8b5cf6;margin-top:2px">→ Convertido a '+(f.convertidoA)+'</div>';
+    if (f.origenDoc) convBadge += '<div style="font-size:9px;color:#d97706;margin-top:2px">← Desde '+(f.origenDoc)+'</div>';
+    // Convert buttons
+    var convertBtns = '';
+    if (!anulada && f.estado !== 'CONVERTIDA' && f.estado !== 'FACTURADA') {
+      if (f.tipoDoc === 'cotizacion') convertBtns = '<button class="btn btn-sm" style="background:#059669;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'nota\')">→ NV</button>';
+      if (f.tipoDoc === 'nota') convertBtns = '<button class="btn btn-sm" style="background:#1a56db;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'factura\')">→ Factura</button>';
+      if (f.tipoDoc === 'cotizacion') convertBtns += ' <button class="btn btn-sm" style="background:#1a56db;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'factura\')">→ FA</button>';
+    }
     return '<div class="inv-list-item" style="'+(anulada ? 'opacity:.5;' : '')+'">'
       + '<div class="inv-li-left" onclick="verFactura('+i+')" style="flex:1;cursor:pointer">'
       + '<div>'
-      + '<div class="inv-li-num">'+(f.tipoDocPrefix||"NV")+'-'+fmtNum(f.numero)+'</div>'
+      + '<div class="inv-li-num">'+(f.tipoDocPrefix||"NV")+'-'+fmtNum(f.numero)+estadoBadge+'</div>'
       + '<div style="font-size:10px;font-weight:700;color:'+typeColor+'">'+(f.tipoDocLabel||"NOTA DE VENTA")+'</div>'
-      + (anulada ? '<span style="font-size:10px;color:var(--red);font-weight:700">⛔ ANULADA</span>' : '')
+      + convBadge
       + '</div>'
       + '<div>'
       + '<div class="inv-li-client">'+escH(f.cliente.nombre)+'<small>'+escH(f.cliente.ruc)+(f.cliente.email?' · '+escH(f.cliente.email):'')+'</small></div>'
@@ -2501,8 +2572,9 @@ function renderHistorial() {
       + '<div class="inv-li-date">'+f.fecha+'</div>'
       + '<div class="inv-li-items">'+f.items.length+' producto(s)</div>'
       + '</div>'
-      + '<div class="inv-li-actions">'
-      + (!anulada ? '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();abrirAnular('+i+')">Anular</button>' : '')
+      + '<div class="inv-li-actions" style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'
+      + convertBtns
+      + (!anulada ? '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();abrirAnular('+i+')" style="font-size:10px">Anular</button>' : '')
       + '</div></div>';
   }).join('');
 }
@@ -2616,8 +2688,32 @@ function verFactura(idx) {
     }
   }
 
+  // Conversion/origin info banner
+  if (f.origenDoc) {
+    html += `<div style="margin-top:10px;padding:8px 14px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;font-size:12px;color:#6d28d9">
+      <strong>📎 Origen:</strong> Convertido desde ${escH(f.origenDoc)}</div>`;
+  }
+  if (f.convertidoA) {
+    html += `<div style="margin-top:10px;padding:8px 14px;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;font-size:12px;color:#6d28d9">
+      <strong>→ Convertido a:</strong> ${escH(f.convertidoA)}</div>`;
+  }
+
   document.getElementById('verFactContent').innerHTML = html;
   document.getElementById('modalVerFact').classList.add('open');
+
+  // Dynamic convert buttons in modal footer
+  var cbDiv = document.getElementById('modalConvertBtns');
+  cbDiv.innerHTML = '';
+  if (f.estado !== 'ANULADA' && f.estado !== 'CONVERTIDA' && f.estado !== 'FACTURADA') {
+    if (f.tipoDoc === 'cotizacion') {
+      cbDiv.innerHTML = '<button class="btn btn-pri" style="background:#059669;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'nota\')">→ Convertir a Nota de Venta</button>'
+        + '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Convertir a Factura</button>';
+    }
+    if (f.tipoDoc === 'nota') {
+      cbDiv.innerHTML = '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Convertir a Factura</button>';
+    }
+  }
+
   // Render abonos
   setTimeout(() => renderAbonosEnModal(f.numero), 100);
 }
