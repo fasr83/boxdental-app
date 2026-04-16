@@ -929,6 +929,51 @@ td{padding:8px 12px;vertical-align:middle}
 <!-- PRINT AREA (hidden, only visible when printing) -->
 <div id="printArea" style="display:none"></div>
 
+<!-- MODAL NOTA CRÉDITO / DÉBITO -->
+<div class="overlay" id="modalNotaCD">
+<div class="modal" style="max-width:520px">
+  <h2 id="notaCDTitle">Nota de Crédito</h2>
+  <input type="hidden" id="notaCDFactIdx">
+  <input type="hidden" id="notaCDTipo">
+  <div style="margin-bottom:12px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Factura vinculada</div>
+    <div id="notaCDFactRef" style="font-weight:700;font-size:14px;color:var(--pri)"></div>
+  </div>
+  <div style="margin-bottom:12px">
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Motivo *</label>
+    <select id="notaCDMotivo" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;margin-top:4px">
+      <option value="devolucion">Devolución de productos</option>
+      <option value="descuento">Descuento posterior</option>
+      <option value="error_precio">Error en precio</option>
+      <option value="error_cantidad">Error en cantidad</option>
+      <option value="mora">Interés por mora (ND)</option>
+      <option value="cargo_adicional">Cargo adicional (ND)</option>
+      <option value="ajuste">Ajuste de precio (ND)</option>
+      <option value="otro">Otro</option>
+    </select>
+  </div>
+  <div style="margin-bottom:12px">
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Monto *</label>
+    <input type="number" id="notaCDMonto" min="0.01" step="0.01" placeholder="0.00" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:16px;font-weight:700;margin-top:4px">
+    <div id="notaCDMaxLabel" style="font-size:10px;color:var(--muted);margin-top:2px"></div>
+  </div>
+  <div style="margin-bottom:12px">
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Observaciones</label>
+    <textarea id="notaCDObs" rows="2" placeholder="Detalle adicional..." style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;margin-top:4px;resize:vertical"></textarea>
+  </div>
+  <div id="notaCDDevolucion" style="display:none;margin-bottom:12px;padding:8px;background:#fef3c7;border-radius:6px">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+      <input type="checkbox" id="notaCDRevertirStock" checked style="width:16px;height:16px">
+      Devolver productos al inventario
+    </label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalNotaCD')">Cancelar</button>
+    <button class="btn btn-pri" onclick="emitirNotaCD()" id="btnEmitirNotaCD">Emitir Nota de Crédito</button>
+  </div>
+</div>
+</div>
+
 <!-- MODAL CONFIRM ANULAR -->
 <div class="overlay" id="modalAnular">
 <div class="modal" style="max-width:420px">
@@ -2540,7 +2585,7 @@ function renderHistorial() {
   list.innerHTML = filtered.map(function(x) {
     var f = x.f, i = x.idx;
     var anulada = f.estado === 'ANULADA';
-    var typeColors = {nota:'#059669',factura:'#1a56db',cotizacion:'#d97706'};
+    var typeColors = {nota:'#059669',factura:'#1a56db',cotizacion:'#d97706',nota_credito:'#dc2626',nota_debito:'#d97706'};
     var typeColor = typeColors[f.tipoDoc] || '#64748b';
     // Estado badge
     var estadoColors = {EMITIDA:'#3b82f6',APROBADA:'#059669',FACTURADA:'#8b5cf6',ANULADA:'#dc2626',CONVERTIDA:'#8b5cf6'};
@@ -2701,16 +2746,24 @@ function verFactura(idx) {
   document.getElementById('verFactContent').innerHTML = html;
   document.getElementById('modalVerFact').classList.add('open');
 
-  // Dynamic convert buttons in modal footer
+  // Dynamic convert buttons + NC/ND buttons in modal footer
   var cbDiv = document.getElementById('modalConvertBtns');
   cbDiv.innerHTML = '';
-  if (f.estado !== 'ANULADA' && f.estado !== 'CONVERTIDA' && f.estado !== 'FACTURADA') {
-    if (f.tipoDoc === 'cotizacion') {
-      cbDiv.innerHTML = '<button class="btn btn-pri" style="background:#059669;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'nota\')">→ Convertir a Nota de Venta</button>'
-        + '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Convertir a Factura</button>';
+  if (f.estado !== 'ANULADA' && f.estado !== 'CONVERTIDA') {
+    // Conversion buttons
+    if (f.estado !== 'FACTURADA') {
+      if (f.tipoDoc === 'cotizacion') {
+        cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#059669;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'nota\')">→ NV</button>';
+        cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ FA</button>';
+      }
+      if (f.tipoDoc === 'nota') {
+        cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Factura</button>';
+      }
     }
-    if (f.tipoDoc === 'nota') {
-      cbDiv.innerHTML = '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Convertir a Factura</button>';
+    // NC/ND buttons for facturas and notas
+    if (f.tipoDoc === 'nota' || f.tipoDoc === 'factura') {
+      cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#dc2626;font-size:11px" onclick="abrirNotaCD('+idx+',\'credito\')">NC</button>';
+      cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#d97706;font-size:11px" onclick="abrirNotaCD('+idx+',\'debito\')">ND</button>';
     }
   }
 
@@ -2991,6 +3044,102 @@ function exportHistCSV() {
 }
 
 // ── NAV ─────────────────────────────────────────────────
+// ── NOTAS DE CRÉDITO / DÉBITO ─────────────────────────
+function abrirNotaCD(idx, tipo) {
+  var f = facturas[idx];
+  if (!f) return;
+  document.getElementById('notaCDFactIdx').value = idx;
+  document.getElementById('notaCDTipo').value = tipo;
+  var isNC = tipo === 'credito';
+  document.getElementById('notaCDTitle').textContent = isNC ? 'Nota de Crédito' : 'Nota de Débito';
+  document.getElementById('notaCDFactRef').textContent = (f.tipoDocPrefix||'NV') + '-' + fmtNum(f.numero) + ' — ' + escH(f.cliente.nombre) + ' — ' + fmtCur(f.total);
+  document.getElementById('notaCDMonto').value = '';
+  document.getElementById('notaCDMaxLabel').textContent = isNC ? 'Máximo: ' + fmtCur(f.total) : '';
+  document.getElementById('notaCDObs').value = '';
+  document.getElementById('btnEmitirNotaCD').textContent = isNC ? 'Emitir Nota de Crédito' : 'Emitir Nota de Débito';
+  document.getElementById('btnEmitirNotaCD').style.background = isNC ? '#dc2626' : '#d97706';
+  // Show/hide motivo options based on type
+  var sel = document.getElementById('notaCDMotivo');
+  Array.from(sel.options).forEach(function(opt) {
+    var ndMotivos = ['mora','cargo_adicional','ajuste'];
+    var ncMotivos = ['devolucion','descuento','error_precio','error_cantidad'];
+    if (isNC) opt.style.display = ndMotivos.includes(opt.value) ? 'none' : '';
+    else opt.style.display = ncMotivos.includes(opt.value) ? 'none' : '';
+  });
+  sel.value = isNC ? 'devolucion' : 'mora';
+  // Show devolucion checkbox only for NC
+  document.getElementById('notaCDDevolucion').style.display = (isNC && sel.value === 'devolucion') ? 'block' : 'none';
+  sel.onchange = function() {
+    document.getElementById('notaCDDevolucion').style.display = (isNC && sel.value === 'devolucion') ? 'block' : 'none';
+  };
+  document.getElementById('modalNotaCD').classList.add('open');
+}
+
+function emitirNotaCD() {
+  var idx = parseInt(document.getElementById('notaCDFactIdx').value);
+  var tipo = document.getElementById('notaCDTipo').value;
+  var f = facturas[idx];
+  if (!f) return;
+  var monto = parseFloat(document.getElementById('notaCDMonto').value);
+  if (!monto || monto <= 0) { showToast('Ingresa un monto válido','err'); return; }
+  if (tipo === 'credito' && monto > f.total) { showToast('El monto no puede exceder el total de la factura','err'); return; }
+  var motivo = document.getElementById('notaCDMotivo').value;
+  var obs = document.getElementById('notaCDObs').value.trim();
+  var isNC = tipo === 'credito';
+  var prefix = isNC ? 'NC' : 'ND';
+  var label = isNC ? 'NOTA DE CRÉDITO' : 'NOTA DE DÉBITO';
+
+  // Create NC/ND document
+  var nota = {
+    numero: nextFactura,
+    fecha: today(),
+    cliente: JSON.parse(JSON.stringify(f.cliente)),
+    items: [{nombre: label + ' — ' + motivo, qty: 1, precioUnit: monto, total: monto, descUnit: 0}],
+    subtotal: monto,
+    descuento: 0, descuentoTipo: 'fixed', descuentoValor: 0,
+    subtotalConDescuento: monto,
+    taxPct: f.taxPct,
+    tax: monto * f.taxPct / 100,
+    total: monto + (monto * f.taxPct / 100),
+    tipoDoc: isNC ? 'nota_credito' : 'nota_debito',
+    tipoDocLabel: label,
+    tipoDocPrefix: prefix,
+    estado: 'EMITIDA',
+    emitidaAt: new Date().toISOString(),
+    pago: {metodo: 'no_especificado'},
+    envio: null,
+    cotExtras: null,
+    origenDoc: (f.tipoDocPrefix||'NV') + '-' + fmtNum(f.numero),
+    origenIdx: f.numero,
+    notaCDTipo: tipo,
+    notaCDMotivo: motivo,
+    notaCDObs: obs
+  };
+
+  // Revert inventory if NC + devolucion
+  if (isNC && motivo === 'devolucion' && document.getElementById('notaCDRevertirStock').checked) {
+    f.items.forEach(function(it) {
+      var current = getStock(it.id);
+      conteos[it.id] = current + it.qty;
+    });
+    nota.inventarioRevertido = true;
+  }
+
+  facturas.unshift(nota);
+  nextFactura++;
+
+  // Update original document reference
+  if (!f.notasCD) f.notasCD = [];
+  f.notasCD.push({ tipo: prefix, numero: nota.numero, monto: monto, fecha: today() });
+
+  saveAll();
+  updateFactNum();
+  renderHistorial();
+  closeModal('modalNotaCD');
+  closeModal('modalVerFact');
+  showToast('✅ ' + prefix + '-' + fmtNum(nota.numero) + ' emitida por ' + fmtCur(nota.total), 'ok');
+}
+
 function openInvApp() {
   // Try opening the inventory file
   window.open('Conteo_Inventario_BoxDental.html','_blank');

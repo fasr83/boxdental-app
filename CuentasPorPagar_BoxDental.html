@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuentas por Pagar - BoxDental</title>
+<script src="auth-guard.js"></script>
+<script src="firebase-sync.js"></script>
+<style>
+:root{
+  --bg:#0f172a;--card:#1e293b;--pri:#1a56db;--pri-d:#1341b0;
+  --text:#e2e8f0;--muted:#94a3b8;--border:#334155;
+  --green:#059669;--red:#dc2626;--yellow:#d97706;--orange:#ea580c;
+  --sh1:0 1px 3px rgba(0,0,0,.3);--sh2:0 4px 16px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{background:linear-gradient(135deg,#1a56db,#1341b0);color:#fff;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:var(--sh2);position:sticky;top:0;z-index:200;gap:12px;flex-wrap:wrap}
+.topbar-left h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.topbar-left span{font-size:11px;opacity:.8;display:block}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:12px;opacity:.9}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;
+  font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-pri{background:var(--pri);color:#fff}
+.btn-pri:hover{background:var(--pri-d)}
+.btn-w{background:#fff;color:var(--pri)}
+.btn-w:hover{background:#e8eef8}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{background:#047857}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-warn{background:var(--yellow);color:#fff}
+.btn-warn:hover{background:#b45309}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;overflow-x:auto}
+.tab{padding:12px 20px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+  border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:#fff;border-bottom-color:var(--pri)}
+.tab .badge-count{background:var(--red);color:#fff;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;margin-left:4px}
+
+/* ── STATS BAR ── */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:16px 20px}
+.stat-card{background:var(--card);border-radius:12px;padding:16px;box-shadow:var(--sh1);border:1px solid var(--border)}
+.stat-label{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:800;line-height:1.2}
+.stat-value.blue{color:#60a5fa}
+.stat-value.green{color:#34d399}
+.stat-value.red{color:#f87171}
+.stat-value.yellow{color:#fbbf24}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── SECTION ── */
+.section{display:none;padding:0 20px 20px}
+.section.active{display:block}
+.section-title{font-size:16px;font-weight:700;margin:16px 0 12px;display:flex;align-items:center;gap:8px}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.search-input{flex:1;min-width:200px;padding:9px 12px 9px 36px;border:2px solid var(--border);
+  border-radius:8px;font-size:14px;outline:none;background:var(--card);color:var(--text);
+  transition:border-color .15s}
+.search-input:focus{border-color:var(--pri)}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap .ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:15px}
+select.flt{padding:9px 10px;border:2px solid var(--border);border-radius:8px;
+  font-size:12px;outline:none;background:var(--card);color:var(--text);cursor:pointer}
+select.flt:focus{border-color:var(--pri)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--sh1)}
+thead th{background:#162033;padding:10px 12px;text-align:left;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#253347}
+td{padding:8px 12px;vertical-align:middle;font-size:13px}
+
+/* ── STATUS BADGES ── */
+.status{display:inline-block;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.status-pendiente{background:#1e3a5f;color:#60a5fa}
+.status-aprobada{background:#14532d;color:#4ade80}
+.status-pagada{background:#064e3b;color:#34d399}
+.status-vencida{background:#450a0a;color:#f87171;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* ── AGING ── */
+.aging-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.aging-item{background:var(--card);border-radius:10px;padding:12px;border:1px solid var(--border);text-align:center}
+.aging-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.aging-value{font-size:18px;font-weight:800}
+.aging-count{font-size:11px;color:var(--muted)}
+
+/* ── FORM / MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;
+  align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--card);border-radius:14px;padding:24px;width:100%;max-width:700px;
+  box-shadow:var(--sh2);max-height:90vh;overflow-y:auto;border:1px solid var(--border)}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
+  color:var(--muted);letter-spacing:.05em;margin-bottom:5px}
+.form-row input,.form-row select,.form-row textarea{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:14px;outline:none;transition:border-color .15s;background:#0f172a;color:var(--text)}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--pri)}
+.form-row input::placeholder{color:var(--muted)}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── INVOICE FORM ── */
+.inv-items-table{width:100%;border-collapse:collapse;margin:8px 0}
+.inv-items-table th{background:#162033;padding:6px 8px;font-size:10px;text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--border);text-align:left}
+.inv-items-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.inv-items-table input{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;
+  background:#0f172a;color:var(--text);font-size:13px;outline:none}
+.inv-items-table input:focus{border-color:var(--pri)}
+.inv-items-table .del-row{cursor:pointer;color:var(--red);font-size:16px;text-align:center}
+.inv-items-table .del-row:hover{color:#f87171}
+.inv-totals{text-align:right;margin-top:8px}
+.inv-totals .row{display:flex;justify-content:flex-end;gap:20px;padding:3px 0;font-size:13px}
+.inv-totals .row span:first-child{color:var(--muted)}
+.inv-totals .row.total{font-size:18px;font-weight:800;color:var(--green);border-top:2px solid var(--border);padding-top:8px;margin-top:4px}
+
+/* ── PRODUCT SEARCH DROPDOWN ── */
+.prod-search-wrap{position:relative}
+.prod-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;max-height:200px;overflow-y:auto;z-index:10;box-shadow:var(--sh2);display:none}
+.prod-dropdown.open{display:block}
+.prod-opt{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.prod-opt:hover{background:#253347}
+.prod-opt:last-child{border-bottom:none}
+.prod-opt .pcat{font-size:10px;color:var(--muted)}
+
+/* ── DETAIL VIEW ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.detail-item{padding:10px;background:#0f172a;border-radius:8px;border:1px solid var(--border)}
+.detail-item .dl{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.detail-item .dv{font-size:14px;font-weight:600}
+
+/* ── PAGOS LIST ── */
+.pagos-list{margin-top:12px}
+.pago-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;
+  background:#0f172a;border-radius:8px;margin-bottom:6px;border:1px solid var(--border);font-size:13px}
+.pago-item .pago-amt{font-weight:700;color:var(--green)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:#1f2937;color:#fff;padding:12px 20px;
+  border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--sh2);
+  transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;
+  display:flex;align-items:center;gap:8px;max-width:360px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:var(--green)}
+.toast.err{background:var(--red)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .topbar{flex-direction:column;align-items:flex-start}
+  .stats-bar{grid-template-columns:1fr 1fr}
+  .form-2col,.form-3col{grid-template-columns:1fr}
+  .detail-grid{grid-template-columns:1fr}
+  .aging-bar{grid-template-columns:1fr 1fr}
+  .tabs{padding:0 10px}
+  .tab{padding:10px 14px;font-size:12px}
+  .section{padding:0 10px 10px}
+  table{font-size:12px}
+  td{padding:6px 8px}
+  .modal{padding:16px;max-width:100%}
+}
+@media(max-width:480px){
+  .stats-bar{grid-template-columns:1fr}
+  .aging-bar{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>📋 Cuentas por Pagar</h1>
+    <span>BoxDental Ecuador - Gestión de CxP y Facturas de Proveedor</span>
+  </div>
+  <div class="topbar-right">
+    <span class="sync-badge"><span class="sync-dot"></span><span id="lastSaved">—</span></span>
+    <span id="fbSyncStatus" style="font-size:11px"></span>
+    <button class="btn btn-w" onclick="location.href='index.html'">🏠 Inicio</button>
+  </div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</div>
+  <div class="tab" data-tab="nueva" onclick="switchTab('nueva')">➕ Nueva Factura</div>
+  <div class="tab" data-tab="listado" onclick="switchTab('listado')">📃 Listado CxP <span class="badge-count" id="badgeVencidas" style="display:none"></span></div>
+  <div class="tab" data-tab="aging" onclick="switchTab('aging')">📅 Antigüedad</div>
+</div>
+
+<!-- ═══ SECTION: DASHBOARD ═══ -->
+<div class="section active" id="sec-dashboard">
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Total CxP Pendiente</div>
+      <div class="stat-value blue" id="statPendiente">$0.00</div>
+      <div class="stat-sub" id="statPendienteCount">0 facturas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Vencido</div>
+      <div class="stat-value red" id="statVencido">$0.00</div>
+      <div class="stat-sub" id="statVencidoCount">0 facturas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Vence esta semana</div>
+      <div class="stat-value yellow" id="statSemana">$0.00</div>
+      <div class="stat-sub" id="statSemanaCount">0 facturas</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pagado este mes</div>
+      <div class="stat-value green" id="statPagado">$0.00</div>
+      <div class="stat-sub" id="statPagadoCount">0 pagos</div>
+    </div>
+  </div>
+
+  <div style="padding:0 20px">
+    <div class="section-title">⚠️ Facturas Vencidas</div>
+    <div class="tbl-wrap">
+      <table id="tblVencidas">
+        <thead><tr>
+          <th>Proveedor</th><th>N.Factura</th><th>Fecha Venc.</th><th>Días Vencida</th><th>Total</th><th>Saldo</th><th>Acción</th>
+        </tr></thead>
+        <tbody id="tbodyVencidas"></tbody>
+      </table>
+    </div>
+    <div id="emptyVencidas" style="text-align:center;padding:30px;color:var(--muted);display:none">
+      <div style="font-size:32px;margin-bottom:8px">✅</div>
+      No hay facturas vencidas
+    </div>
+
+    <div class="section-title" style="margin-top:20px">📅 Próximos Vencimientos (7 días)</div>
+    <div class="tbl-wrap">
+      <table id="tblProximos">
+        <thead><tr>
+          <th>Proveedor</th><th>N.Factura</th><th>Fecha Venc.</th><th>Días Restantes</th><th>Total</th><th>Saldo</th>
+        </tr></thead>
+        <tbody id="tbodyProximos"></tbody>
+      </table>
+    </div>
+    <div id="emptyProximos" style="text-align:center;padding:30px;color:var(--muted);display:none">
+      <div style="font-size:32px;margin-bottom:8px">📭</div>
+      Sin vencimientos próximos
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: NUEVA FACTURA ═══ -->
+<div class="section" id="sec-nueva">
+  <div class="section-title">📝 Registrar Factura de Proveedor</div>
+  <div style="background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);max-width:900px">
+
+    <div class="form-2col">
+      <div class="form-row">
+        <label>Proveedor</label>
+        <select id="frmProveedor" onchange="onProveedorChange()">
+          <option value="">— Seleccionar —</option>
+        </select>
+      </div>
+      <div class="form-row" id="newProvRow" style="display:none">
+        <label>Nombre Nuevo Proveedor</label>
+        <input id="frmNewProv" placeholder="Nombre del proveedor">
+      </div>
+    </div>
+
+    <div class="form-3col">
+      <div class="form-row">
+        <label>N. Factura Proveedor</label>
+        <input id="frmNumFactura" placeholder="Ej: FAC-001234">
+      </div>
+      <div class="form-row">
+        <label>Fecha de Emisión</label>
+        <input type="date" id="frmFechaEmision">
+      </div>
+      <div class="form-row">
+        <label>Fecha de Vencimiento</label>
+        <input type="date" id="frmFechaVenc">
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:16px;font-size:14px">📦 Productos</div>
+    <div class="tbl-wrap">
+      <table class="inv-items-table" id="tblItems">
+        <thead><tr>
+          <th style="width:40%">Producto</th>
+          <th style="width:15%">Cantidad</th>
+          <th style="width:18%">Costo Unitario</th>
+          <th style="width:18%">Subtotal</th>
+          <th style="width:9%"></th>
+        </tr></thead>
+        <tbody id="tbodyItems"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="addItemRow()" style="margin-top:8px">+ Agregar Producto</button>
+
+    <div class="inv-totals">
+      <div class="row"><span>Subtotal</span><span id="invSubtotal">$0.00</span></div>
+      <div class="row"><span>IVA (15%)</span><span id="invIVA">$0.00</span></div>
+      <div class="row total"><span>TOTAL</span><span id="invTotal">$0.00</span></div>
+    </div>
+
+    <div class="form-row" style="margin-top:16px">
+      <label>Observaciones</label>
+      <textarea id="frmObs" rows="2" placeholder="Notas adicionales..." style="resize:vertical"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="resetForm()">Cancelar</button>
+      <button class="btn btn-success" onclick="guardarFactura()">💾 Guardar Factura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SECTION: LISTADO CxP ═══ -->
+<div class="section" id="sec-listado">
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="ico">🔍</span>
+      <input class="search-input" id="searchCxP" placeholder="Buscar por proveedor o N. factura..." oninput="renderListado()">
+    </div>
+    <select class="flt" id="filterStatus" onchange="renderListado()">
+      <option value="">Todos los estados</option>
+      <option value="Pendiente">Pendiente</option>
+      <option value="Aprobada">Aprobada</option>
+      <option value="Pagada">Pagada</option>
+      <option value="Vencida">Vencida</option>
+    </select>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Proveedor</th><th>N.Factura</th><th>Emisión</th><th>Vencimiento</th>
+        <th>Total</th><th>Saldo</th><th>Estado</th><th>Acciones</th>
+      </tr></thead>
+      <tbody id="tbodyListado"></tbody>
+    </table>
+  </div>
+  <div id="emptyListado" style="text-align:center;padding:40px;color:var(--muted);display:none">
+    <div style="font-size:42px;margin-bottom:8px">📋</div>
+    No hay facturas registradas
+  </div>
+</div>
+
+<!-- ═══ SECTION: AGING ═══ -->
+<div class="section" id="sec-aging">
+  <div class="section-title">📊 Reporte de Antigüedad de Saldos</div>
+  <div class="aging-bar">
+    <div class="aging-item">
+      <div class="aging-label">0 - 30 días</div>
+      <div class="aging-value green" id="aging030">$0.00</div>
+      <div class="aging-count" id="aging030c">0 facturas</div>
+    </div>
+    <div class="aging-item">
+      <div class="aging-label">31 - 60 días</div>
+      <div class="aging-value yellow" id="aging3160">$0.00</div>
+      <div class="aging-count" id="aging3160c">0 facturas</div>
+    </div>
+    <div class="aging-item">
+      <div class="aging-label">61 - 90 días</div>
+      <div class="aging-value" style="color:var(--orange)" id="aging6190">$0.00</div>
+      <div class="aging-count" id="aging6190c">0 facturas</div>
+    </div>
+    <div class="aging-item">
+      <div class="aging-label">+90 días</div>
+      <div class="aging-value red" id="aging90">$0.00</div>
+      <div class="aging-count" id="aging90c">0 facturas</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:16px">Detalle por Proveedor</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Proveedor</th><th>Facturas</th><th>0-30d</th><th>31-60d</th><th>61-90d</th><th>+90d</th><th>Total</th>
+      </tr></thead>
+      <tbody id="tbodyAging"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ MODAL: VER DETALLE ═══ -->
+<div class="overlay" id="modalDetalle">
+  <div class="modal" style="max-width:750px">
+    <h2>📄 Detalle de Factura <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="closeModal('modalDetalle')">✕</button></h2>
+    <div id="detalleContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalDetalle')">Cerrar</button>
+      <button class="btn btn-pri" id="btnPrintDetalle" onclick="printCurrentInvoice()">🖨 Imprimir</button>
+      <button class="btn btn-success" id="btnPagarDetalle" onclick="openPago()">💰 Registrar Pago</button>
+      <button class="btn btn-warn" id="btnAprobar" onclick="aprobarFactura()" style="display:none">✅ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: REGISTRAR PAGO ═══ -->
+<div class="overlay" id="modalPago">
+  <div class="modal" style="max-width:480px">
+    <h2>💰 Registrar Pago <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="closeModal('modalPago')">✕</button></h2>
+    <div class="form-row">
+      <label>Saldo Pendiente</label>
+      <input id="pagoSaldo" readonly style="font-weight:700;color:var(--yellow)">
+    </div>
+    <div class="form-2col">
+      <div class="form-row">
+        <label>Monto a Pagar</label>
+        <input type="number" id="pagoMonto" step="0.01" min="0.01" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label>Fecha de Pago</label>
+        <input type="date" id="pagoFecha">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Método de Pago</label>
+      <select id="pagoMetodo">
+        <option value="transferencia">Transferencia Bancaria</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="cheque">Cheque</option>
+        <option value="tarjeta">Tarjeta</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Referencia / Comprobante</label>
+      <input id="pagoRef" placeholder="N. de transferencia, cheque, etc.">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalPago')">Cancelar</button>
+      <button class="btn btn-success" onclick="guardarPago()">💾 Confirmar Pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: BUSCAR PRODUCTO ═══ -->
+<div class="overlay" id="modalBuscarProd">
+  <div class="modal" style="max-width:550px">
+    <h2>🔍 Buscar Producto <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="closeModal('modalBuscarProd')">✕</button></h2>
+    <div class="form-row">
+      <input id="prodSearchInput" placeholder="Escriba para buscar..." oninput="filterProdSearch()">
+    </div>
+    <div id="prodSearchResults" style="max-height:300px;overflow-y:auto"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div class="section-title" style="font-size:13px;margin:0 0 8px">Crear Producto Nuevo</div>
+      <div class="form-2col">
+        <div class="form-row"><label>Nombre</label><input id="newProdNombre" placeholder="Nombre del producto"></div>
+        <div class="form-row"><label>Categoría</label><input id="newProdCat" placeholder="Categoría"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Costo</label><input type="number" id="newProdCosto" step="0.01" placeholder="0.00"></div>
+        <div class="form-row"><label>Precio Sugerido</label><input type="number" id="newProdPrecio" step="0.01" placeholder="0.00"></div>
+      </div>
+      <button class="btn btn-pri btn-sm" onclick="crearProductoNuevo()">+ Crear y Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// BoxDental - Cuentas por Pagar + Facturas de Proveedor
+// ═══════════════════════════════════════════════════════════
+
+const COMPANY = {
+  nombre: 'BOXDENTAL ECUADOR',
+  ruc: '1758463234001',
+  direccion: 'Isabel La Católica y Madrid, Edf. Isabela Plaza, Almacén 2',
+  ciudad: 'Quito, Ecuador',
+  tel: '0982234568 · 0998193888',
+  email: 'ventas@boxdentalecuador.co',
+  web: 'www.boxdentalecuador.co'
+};
+
+const SK_CXP = 'bxd_cxp_v1';
+const SK_INV = 'bxd_inv_v2';
+const IVA_RATE = 0.15;
+
+let facturas = [];  // Array of invoice records
+let currentViewId = null;
+let activeItemRow = null; // for product search
+let saveTimer = null;
+
+// ── Inventory references (read from localStorage) ──
+let invData = { conteos:{}, extras:{}, customProducts:[], proveedores:[], nextCustomId:10000 };
+
+// ═══ INIT ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  loadInventory();
+  loadData();
+  populateProveedores();
+  setDefaultDates();
+  addItemRow();
+  renderAll();
+
+  // Firebase sync
+  if (window.BXD_FB) {
+    BXD_FB.load(SK_CXP, function(data) {
+      if (data && data.facturas) {
+        facturas = data.facturas;
+        renderAll();
+        toast('Datos sincronizados desde la nube', 'ok');
+      }
+    });
+  }
+});
+
+// ═══ DATA PERSISTENCE ═══════════════════════════════════════
+function loadData() {
+  try {
+    var raw = localStorage.getItem(SK_CXP);
+    if (!raw) raw = sessionStorage.getItem(SK_CXP);
+    if (raw) {
+      var d = JSON.parse(raw);
+      facturas = d.facturas || [];
+      updateSaveTime(d.savedAt);
+    }
+  } catch(e) { facturas = []; }
+}
+
+function saveData() {
+  var data = { facturas: facturas, savedAt: new Date().toISOString() };
+  var str = JSON.stringify(data);
+  try {
+    localStorage.setItem(SK_CXP, str);
+    sessionStorage.setItem(SK_CXP, str);
+    updateSaveTime(data.savedAt);
+    if (window.BXD_FB) BXD_FB.save(SK_CXP, data);
+  } catch(e) {
+    toast('Error al guardar datos', 'err');
+  }
+}
+
+function autoSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveData, 500);
+}
+
+function updateSaveTime(iso) {
+  if (!iso) return;
+  var d = new Date(iso);
+  document.getElementById('lastSaved').textContent = 'Guardado: ' + d.toLocaleTimeString('es-EC');
+}
+
+// ═══ INVENTORY INTEGRATION ══════════════════════════════════
+function loadInventory() {
+  try {
+    var raw = localStorage.getItem(SK_INV);
+    if (!raw) raw = sessionStorage.getItem(SK_INV);
+    if (raw) {
+      var d = JSON.parse(raw);
+      invData.conteos = d.conteos || {};
+      invData.extras = d.extras || {};
+      invData.customProducts = d.customProducts || [];
+      invData.proveedores = d.proveedores || [];
+      invData.nextCustomId = d.nextCustomId || 10000;
+    }
+  } catch(e) {}
+}
+
+function saveInventory() {
+  try {
+    var raw = localStorage.getItem(SK_INV);
+    if (!raw) raw = sessionStorage.getItem(SK_INV);
+    var existing = raw ? JSON.parse(raw) : {};
+    existing.conteos = invData.conteos;
+    existing.extras = invData.extras;
+    existing.customProducts = invData.customProducts;
+    existing.proveedores = invData.proveedores;
+    existing.nextCustomId = invData.nextCustomId;
+    existing.savedAt = new Date().toISOString();
+    var str = JSON.stringify(existing);
+    localStorage.setItem(SK_INV, str);
+    sessionStorage.setItem(SK_INV, str);
+    if (window.BXD_FB) BXD_FB.save(SK_INV, existing);
+  } catch(e) {
+    console.warn('Error saving inventory:', e);
+  }
+}
+
+function getInventoryProducts() {
+  // Merge hardcoded products with custom ones
+  // We read ALL products from the inventory HTML's ALL_PRODUCTS via localStorage extras
+  var products = [];
+  // Custom products
+  invData.customProducts.forEach(function(p) {
+    products.push({
+      id: p.id,
+      nombre: (invData.extras[p.id] && invData.extras[p.id].nombre) || p.nombre,
+      categoria: p.categoria,
+      costo: (invData.extras[p.id] && invData.extras[p.id].costo != null) ? invData.extras[p.id].costo : p.costo,
+      precio: p.precio
+    });
+  });
+  // Also include any product ID that has conteos or extras (these are from ALL_PRODUCTS)
+  Object.keys(invData.conteos).forEach(function(id) {
+    if (!products.some(function(p) { return String(p.id) === String(id); })) {
+      var ex = invData.extras[id] || {};
+      products.push({
+        id: id,
+        nombre: ex.nombre || ('Producto #' + id),
+        categoria: ex.categoria || 'General',
+        costo: ex.costo || 0,
+        precio: ex.precioSugerido || 0
+      });
+    }
+  });
+  Object.keys(invData.extras).forEach(function(id) {
+    if (!products.some(function(p) { return String(p.id) === String(id); })) {
+      var ex = invData.extras[id];
+      products.push({
+        id: id,
+        nombre: ex.nombre || ('Producto #' + id),
+        categoria: ex.categoria || 'General',
+        costo: ex.costo || 0,
+        precio: ex.precioSugerido || 0
+      });
+    }
+  });
+  return products;
+}
+
+function addStockToInventory(productId, qty, costo, proveedor) {
+  // Add quantity to conteos
+  var current = parseFloat(invData.conteos[productId]) || 0;
+  invData.conteos[productId] = current + parseFloat(qty);
+  // Update cost in extras
+  if (!invData.extras[productId]) invData.extras[productId] = {};
+  invData.extras[productId].costo = parseFloat(costo);
+  if (proveedor) invData.extras[productId].proveedor = proveedor;
+}
+
+// ═══ HELPERS ════════════════════════════════════════════════
+function fmtCur(v) { return '$' + parseFloat(v||0).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d) { if(!d) return '—'; var p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+
+function daysBetween(d1, d2) {
+  var a = new Date(d1); a.setHours(0,0,0,0);
+  var b = new Date(d2); b.setHours(0,0,0,0);
+  return Math.round((b - a) / 86400000);
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function getStatus(f) {
+  if (f.estado === 'Pagada') return 'Pagada';
+  if (f.estado === 'Aprobada') {
+    if (f.fechaVenc && f.fechaVenc < today()) return 'Vencida';
+    return 'Aprobada';
+  }
+  if (f.fechaVenc && f.fechaVenc < today()) return 'Vencida';
+  return f.estado || 'Pendiente';
+}
+
+function getSaldo(f) {
+  var pagado = 0;
+  if (f.pagos && f.pagos.length) {
+    f.pagos.forEach(function(p) { pagado += parseFloat(p.monto) || 0; });
+  }
+  return (parseFloat(f.total) || 0) - pagado;
+}
+
+function toast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(function() { t.className = 'toast'; }, 3000);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ═══ TAB NAVIGATION ═════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelector('.tab[data-tab="'+tab+'"]').classList.add('active');
+  document.getElementById('sec-'+tab).classList.add('active');
+  if (tab === 'listado') renderListado();
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'aging') renderAging();
+  if (tab === 'nueva') { loadInventory(); populateProveedores(); }
+}
+
+// ═══ SET DEFAULT DATES ══════════════════════════════════════
+function setDefaultDates() {
+  document.getElementById('frmFechaEmision').value = today();
+  var venc = new Date();
+  venc.setDate(venc.getDate() + 30);
+  document.getElementById('frmFechaVenc').value = venc.toISOString().split('T')[0];
+}
+
+// ═══ POPULATE PROVEEDORES ═══════════════════════════════════
+function populateProveedores() {
+  var sel = document.getElementById('frmProveedor');
+  var current = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  var provs = invData.proveedores || [];
+  // Also collect proveedores from extras
+  Object.values(invData.extras).forEach(function(ex) {
+    if (ex.proveedor && provs.indexOf(ex.proveedor) === -1) provs.push(ex.proveedor);
+  });
+  // Also from facturas
+  facturas.forEach(function(f) {
+    if (f.proveedor && provs.indexOf(f.proveedor) === -1) provs.push(f.proveedor);
+  });
+  provs.sort().forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+  var o2 = document.createElement('option');
+  o2.value = '__new__'; o2.textContent = '+ Agregar nuevo proveedor';
+  sel.appendChild(o2);
+  if (current) sel.value = current;
+}
+
+function onProveedorChange() {
+  var v = document.getElementById('frmProveedor').value;
+  document.getElementById('newProvRow').style.display = v === '__new__' ? '' : 'none';
+}
+
+// ═══ INVOICE ITEMS ══════════════════════════════════════════
+var itemCounter = 0;
+
+function addItemRow(productId, nombre, qty, costo) {
+  itemCounter++;
+  var tr = document.createElement('tr');
+  tr.id = 'itemRow_' + itemCounter;
+  tr.dataset.productId = productId || '';
+  tr.innerHTML =
+    '<td class="prod-search-wrap">' +
+      '<input class="item-nombre" placeholder="Buscar producto..." value="' + escH(nombre||'') + '" readonly onclick="openProdSearch('+itemCounter+')" style="cursor:pointer">' +
+    '</td>' +
+    '<td><input type="number" class="item-qty" value="'+(qty||'')+'" min="0" step="1" placeholder="0" oninput="calcTotals()"></td>' +
+    '<td><input type="number" class="item-costo" value="'+(costo||'')+'" min="0" step="0.01" placeholder="0.00" oninput="calcTotals()"></td>' +
+    '<td style="font-weight:600;color:var(--green)" class="item-subtotal">$0.00</td>' +
+    '<td class="del-row" onclick="removeItemRow('+itemCounter+')">🗑</td>';
+  document.getElementById('tbodyItems').appendChild(tr);
+  calcTotals();
+}
+
+function removeItemRow(id) {
+  var row = document.getElementById('itemRow_' + id);
+  if (row) row.remove();
+  calcTotals();
+}
+
+function calcTotals() {
+  var subtotal = 0;
+  var rows = document.querySelectorAll('#tbodyItems tr');
+  rows.forEach(function(tr) {
+    var qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+    var cost = parseFloat(tr.querySelector('.item-costo').value) || 0;
+    var sub = qty * cost;
+    tr.querySelector('.item-subtotal').textContent = fmtCur(sub);
+    subtotal += sub;
+  });
+  var iva = subtotal * IVA_RATE;
+  var total = subtotal + iva;
+  document.getElementById('invSubtotal').textContent = fmtCur(subtotal);
+  document.getElementById('invIVA').textContent = fmtCur(iva);
+  document.getElementById('invTotal').textContent = fmtCur(total);
+}
+
+// ═══ PRODUCT SEARCH MODAL ═══════════════════════════════════
+function openProdSearch(rowId) {
+  activeItemRow = rowId;
+  document.getElementById('prodSearchInput').value = '';
+  document.getElementById('newProdNombre').value = '';
+  document.getElementById('newProdCat').value = '';
+  document.getElementById('newProdCosto').value = '';
+  document.getElementById('newProdPrecio').value = '';
+  loadInventory();
+  filterProdSearch();
+  document.getElementById('modalBuscarProd').classList.add('open');
+  setTimeout(function() { document.getElementById('prodSearchInput').focus(); }, 100);
+}
+
+function filterProdSearch() {
+  var q = document.getElementById('prodSearchInput').value.toLowerCase();
+  var prods = getInventoryProducts();
+  var filtered = prods.filter(function(p) {
+    return p.nombre.toLowerCase().indexOf(q) >= 0 || (p.categoria && p.categoria.toLowerCase().indexOf(q) >= 0);
+  }).slice(0, 50);
+  var html = '';
+  if (filtered.length === 0) {
+    html = '<div style="padding:20px;text-align:center;color:var(--muted)">No se encontraron productos</div>';
+  } else {
+    filtered.forEach(function(p) {
+      html += '<div class="prod-opt" onclick="selectProduct(\''+escH(String(p.id))+'\',\''+escH(p.nombre)+'\','+parseFloat(p.costo||0)+')">' +
+        '<span>'+escH(p.nombre)+'</span>' +
+        '<span><span class="pcat">'+escH(p.categoria||'')+'</span> '+fmtCur(p.costo)+'</span>' +
+      '</div>';
+    });
+  }
+  document.getElementById('prodSearchResults').innerHTML = html;
+}
+
+function selectProduct(id, nombre, costo) {
+  var row = document.getElementById('itemRow_' + activeItemRow);
+  if (!row) return;
+  row.dataset.productId = id;
+  row.querySelector('.item-nombre').value = nombre;
+  row.querySelector('.item-costo').value = costo > 0 ? costo.toFixed(2) : '';
+  closeModal('modalBuscarProd');
+  calcTotals();
+  // Focus qty field
+  row.querySelector('.item-qty').focus();
+}
+
+function crearProductoNuevo() {
+  var nombre = document.getElementById('newProdNombre').value.trim();
+  var cat = document.getElementById('newProdCat').value.trim() || 'General';
+  var costo = parseFloat(document.getElementById('newProdCosto').value) || 0;
+  var precio = parseFloat(document.getElementById('newProdPrecio').value) || 0;
+  if (!nombre) { toast('Ingrese nombre del producto', 'err'); return; }
+
+  var newId = invData.nextCustomId++;
+  invData.customProducts.push({ id: newId, nombre: nombre, categoria: cat, costo: costo, precio: precio });
+  invData.extras[newId] = { costo: costo };
+  saveInventory();
+
+  selectProduct(newId, nombre, costo);
+  toast('Producto "'+nombre+'" creado', 'ok');
+}
+
+// ═══ GUARDAR FACTURA ════════════════════════════════════════
+function guardarFactura() {
+  var provSel = document.getElementById('frmProveedor').value;
+  var proveedor = provSel === '__new__' ? document.getElementById('frmNewProv').value.trim() : provSel;
+  var numFactura = document.getElementById('frmNumFactura').value.trim();
+  var fechaEmision = document.getElementById('frmFechaEmision').value;
+  var fechaVenc = document.getElementById('frmFechaVenc').value;
+  var obs = document.getElementById('frmObs').value.trim();
+
+  if (!proveedor) { toast('Seleccione un proveedor', 'err'); return; }
+  if (!numFactura) { toast('Ingrese número de factura', 'err'); return; }
+  if (!fechaEmision) { toast('Ingrese fecha de emisión', 'err'); return; }
+  if (!fechaVenc) { toast('Ingrese fecha de vencimiento', 'err'); return; }
+
+  // Collect items
+  var items = [];
+  var rows = document.querySelectorAll('#tbodyItems tr');
+  var valid = true;
+  rows.forEach(function(tr) {
+    var pid = tr.dataset.productId;
+    var nombre = tr.querySelector('.item-nombre').value;
+    var qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+    var costo = parseFloat(tr.querySelector('.item-costo').value) || 0;
+    if (!nombre || qty <= 0) { valid = false; return; }
+    items.push({
+      productId: pid,
+      nombre: nombre,
+      qty: qty,
+      costoUnit: costo,
+      subtotal: qty * costo
+    });
+  });
+
+  if (!valid || items.length === 0) { toast('Agregue al menos un producto con cantidad válida', 'err'); return; }
+
+  var subtotal = items.reduce(function(s, it) { return s + it.subtotal; }, 0);
+  var iva = subtotal * IVA_RATE;
+  var total = subtotal + iva;
+
+  // If new proveedor, add to inventory proveedores list
+  if (provSel === '__new__' && proveedor) {
+    if (invData.proveedores.indexOf(proveedor) === -1) {
+      invData.proveedores.push(proveedor);
+    }
+  }
+
+  // Update inventory: add stock and update costs
+  items.forEach(function(it) {
+    if (it.productId) {
+      addStockToInventory(it.productId, it.qty, it.costoUnit, proveedor);
+    }
+  });
+  saveInventory();
+
+  // Create CxP record
+  var factura = {
+    id: genId(),
+    proveedor: proveedor,
+    numFactura: numFactura,
+    fechaEmision: fechaEmision,
+    fechaVenc: fechaVenc,
+    items: items,
+    subtotal: subtotal,
+    iva: iva,
+    total: total,
+    observaciones: obs,
+    estado: 'Pendiente',
+    pagos: [],
+    creadoPor: (window.BXD_USER && BXD_USER.name) || 'usuario',
+    creadoEl: new Date().toISOString()
+  };
+
+  facturas.unshift(factura);
+  saveData();
+  renderAll();
+  resetForm();
+  toast('Factura registrada e inventario actualizado', 'ok');
+  switchTab('listado');
+}
+
+function resetForm() {
+  document.getElementById('frmProveedor').value = '';
+  document.getElementById('frmNewProv').value = '';
+  document.getElementById('newProvRow').style.display = 'none';
+  document.getElementById('frmNumFactura').value = '';
+  document.getElementById('frmObs').value = '';
+  document.getElementById('tbodyItems').innerHTML = '';
+  itemCounter = 0;
+  setDefaultDates();
+  addItemRow();
+  calcTotals();
+}
+
+// ═══ RENDER ALL ═════════════════════════════════════════════
+function renderAll() {
+  // Update statuses (auto-detect overdue)
+  facturas.forEach(function(f) {
+    var computed = getStatus(f);
+    if (computed === 'Vencida' && f.estado !== 'Pagada') f.estado = f.estado === 'Aprobada' ? 'Aprobada' : 'Pendiente';
+  });
+  renderDashboard();
+  renderListado();
+  renderAging();
+  updateBadges();
+}
+
+function updateBadges() {
+  var vencidas = facturas.filter(function(f) { return getStatus(f) === 'Vencida'; });
+  var badge = document.getElementById('badgeVencidas');
+  if (vencidas.length > 0) {
+    badge.textContent = vencidas.length;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ═══ RENDER DASHBOARD ═══════════════════════════════════════
+function renderDashboard() {
+  var hoy = today();
+  var pendientes = facturas.filter(function(f) { var s = getStatus(f); return s === 'Pendiente' || s === 'Aprobada' || s === 'Vencida'; });
+  var totalPend = pendientes.reduce(function(s,f) { return s + getSaldo(f); }, 0);
+  var countPend = pendientes.length;
+
+  var vencidas = facturas.filter(function(f) { return getStatus(f) === 'Vencida'; });
+  var totalVenc = vencidas.reduce(function(s,f) { return s + getSaldo(f); }, 0);
+
+  // This week
+  var endWeek = new Date();
+  endWeek.setDate(endWeek.getDate() + 7);
+  var endWeekStr = endWeek.toISOString().split('T')[0];
+  var semana = facturas.filter(function(f) {
+    var s = getStatus(f);
+    return (s === 'Pendiente' || s === 'Aprobada') && f.fechaVenc >= hoy && f.fechaVenc <= endWeekStr;
+  });
+  var totalSem = semana.reduce(function(s,f) { return s + getSaldo(f); }, 0);
+
+  // Paid this month
+  var mesActual = hoy.substr(0,7);
+  var pagadoMes = 0; var countPagos = 0;
+  facturas.forEach(function(f) {
+    if (f.pagos) f.pagos.forEach(function(p) {
+      if (p.fecha && p.fecha.substr(0,7) === mesActual) {
+        pagadoMes += parseFloat(p.monto) || 0;
+        countPagos++;
+      }
+    });
+  });
+
+  document.getElementById('statPendiente').textContent = fmtCur(totalPend);
+  document.getElementById('statPendienteCount').textContent = countPend + ' facturas';
+  document.getElementById('statVencido').textContent = fmtCur(totalVenc);
+  document.getElementById('statVencidoCount').textContent = vencidas.length + ' facturas';
+  document.getElementById('statSemana').textContent = fmtCur(totalSem);
+  document.getElementById('statSemanaCount').textContent = semana.length + ' facturas';
+  document.getElementById('statPagado').textContent = fmtCur(pagadoMes);
+  document.getElementById('statPagadoCount').textContent = countPagos + ' pagos';
+
+  // Vencidas table
+  var html = '';
+  vencidas.sort(function(a,b) { return a.fechaVenc < b.fechaVenc ? -1 : 1; });
+  vencidas.forEach(function(f) {
+    var dias = daysBetween(f.fechaVenc, hoy);
+    var saldo = getSaldo(f);
+    html += '<tr onclick="viewFactura(\''+f.id+'\')">' +
+      '<td>'+escH(f.proveedor)+'</td>' +
+      '<td>'+escH(f.numFactura)+'</td>' +
+      '<td>'+fmtDate(f.fechaVenc)+'</td>' +
+      '<td style="color:var(--red);font-weight:700">'+dias+' días</td>' +
+      '<td>'+fmtCur(f.total)+'</td>' +
+      '<td style="font-weight:700;color:var(--yellow)">'+fmtCur(saldo)+'</td>' +
+      '<td><button class="btn btn-success btn-sm" onclick="event.stopPropagation();currentViewId=\''+f.id+'\';openPago()">💰 Pagar</button></td>' +
+    '</tr>';
+  });
+  document.getElementById('tbodyVencidas').innerHTML = html;
+  document.getElementById('emptyVencidas').style.display = vencidas.length === 0 ? '' : 'none';
+  document.getElementById('tblVencidas').style.display = vencidas.length > 0 ? '' : 'none';
+
+  // Proximos vencimientos
+  html = '';
+  semana.sort(function(a,b) { return a.fechaVenc < b.fechaVenc ? -1 : 1; });
+  semana.forEach(function(f) {
+    var dias = daysBetween(hoy, f.fechaVenc);
+    var saldo = getSaldo(f);
+    html += '<tr onclick="viewFactura(\''+f.id+'\')">' +
+      '<td>'+escH(f.proveedor)+'</td>' +
+      '<td>'+escH(f.numFactura)+'</td>' +
+      '<td>'+fmtDate(f.fechaVenc)+'</td>' +
+      '<td style="color:var(--yellow);font-weight:700">'+dias+' días</td>' +
+      '<td>'+fmtCur(f.total)+'</td>' +
+      '<td style="font-weight:700">'+fmtCur(saldo)+'</td>' +
+    '</tr>';
+  });
+  document.getElementById('tbodyProximos').innerHTML = html;
+  document.getElementById('emptyProximos').style.display = semana.length === 0 ? '' : 'none';
+  document.getElementById('tblProximos').style.display = semana.length > 0 ? '' : 'none';
+}
+
+// ═══ RENDER LISTADO ═════════════════════════════════════════
+function renderListado() {
+  var q = (document.getElementById('searchCxP').value || '').toLowerCase();
+  var statusFilter = document.getElementById('filterStatus').value;
+  var filtered = facturas.filter(function(f) {
+    var s = getStatus(f);
+    if (statusFilter && s !== statusFilter) return false;
+    if (q) {
+      var match = f.proveedor.toLowerCase().indexOf(q) >= 0 || f.numFactura.toLowerCase().indexOf(q) >= 0;
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  var html = '';
+  filtered.forEach(function(f, i) {
+    var s = getStatus(f);
+    var saldo = getSaldo(f);
+    var statusClass = 'status-' + s.toLowerCase();
+    html += '<tr onclick="viewFactura(\''+f.id+'\')">' +
+      '<td style="color:var(--muted)">'+(i+1)+'</td>' +
+      '<td style="font-weight:600">'+escH(f.proveedor)+'</td>' +
+      '<td>'+escH(f.numFactura)+'</td>' +
+      '<td>'+fmtDate(f.fechaEmision)+'</td>' +
+      '<td>'+fmtDate(f.fechaVenc)+'</td>' +
+      '<td style="font-weight:600">'+fmtCur(f.total)+'</td>' +
+      '<td style="font-weight:700;color:'+(saldo > 0 ? 'var(--yellow)' : 'var(--green)')+'">'+fmtCur(saldo)+'</td>' +
+      '<td><span class="status '+statusClass+'">'+s+'</span></td>' +
+      '<td>' +
+        (s !== 'Pagada' ? '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();currentViewId=\''+f.id+'\';openPago()">💰</button> ' : '') +
+        '<button class="btn btn-pri btn-sm" onclick="event.stopPropagation();viewFactura(\''+f.id+'\')">👁</button> ' +
+        (s === 'Pendiente' ? '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarFactura(\''+f.id+'\')">🗑</button>' : '') +
+      '</td>' +
+    '</tr>';
+  });
+  document.getElementById('tbodyListado').innerHTML = html;
+  document.getElementById('emptyListado').style.display = filtered.length === 0 ? '' : 'none';
+}
+
+// ═══ RENDER AGING ═══════════════════════════════════════════
+function renderAging() {
+  var hoy = today();
+  var buckets = { a:0, b:0, c:0, d:0, ac:0, bc:0, cc:0, dc:0 };
+  var provBuckets = {};
+
+  var open = facturas.filter(function(f) { var s = getStatus(f); return s !== 'Pagada'; });
+  open.forEach(function(f) {
+    var saldo = getSaldo(f);
+    var dias = daysBetween(f.fechaEmision, hoy);
+    if (dias <= 30) { buckets.a += saldo; buckets.ac++; }
+    else if (dias <= 60) { buckets.b += saldo; buckets.bc++; }
+    else if (dias <= 90) { buckets.c += saldo; buckets.cc++; }
+    else { buckets.d += saldo; buckets.dc++; }
+
+    if (!provBuckets[f.proveedor]) provBuckets[f.proveedor] = { count:0, a:0, b:0, c:0, d:0, total:0 };
+    var pb = provBuckets[f.proveedor];
+    pb.count++;
+    pb.total += saldo;
+    if (dias <= 30) pb.a += saldo;
+    else if (dias <= 60) pb.b += saldo;
+    else if (dias <= 90) pb.c += saldo;
+    else pb.d += saldo;
+  });
+
+  document.getElementById('aging030').textContent = fmtCur(buckets.a);
+  document.getElementById('aging030c').textContent = buckets.ac + ' facturas';
+  document.getElementById('aging3160').textContent = fmtCur(buckets.b);
+  document.getElementById('aging3160c').textContent = buckets.bc + ' facturas';
+  document.getElementById('aging6190').textContent = fmtCur(buckets.c);
+  document.getElementById('aging6190c').textContent = buckets.cc + ' facturas';
+  document.getElementById('aging90').textContent = fmtCur(buckets.d);
+  document.getElementById('aging90c').textContent = buckets.dc + ' facturas';
+
+  var html = '';
+  var provNames = Object.keys(provBuckets).sort();
+  provNames.forEach(function(prov) {
+    var pb = provBuckets[prov];
+    html += '<tr>' +
+      '<td style="font-weight:600">'+escH(prov)+'</td>' +
+      '<td>'+pb.count+'</td>' +
+      '<td>'+fmtCur(pb.a)+'</td>' +
+      '<td>'+fmtCur(pb.b)+'</td>' +
+      '<td>'+fmtCur(pb.c)+'</td>' +
+      '<td style="color:var(--red);font-weight:600">'+fmtCur(pb.d)+'</td>' +
+      '<td style="font-weight:700">'+fmtCur(pb.total)+'</td>' +
+    '</tr>';
+  });
+  if (provNames.length === 0) {
+    html = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Sin saldos pendientes</td></tr>';
+  }
+  document.getElementById('tbodyAging').innerHTML = html;
+}
+
+// ═══ VIEW FACTURA DETAIL ════════════════════════════════════
+function viewFactura(id) {
+  var f = facturas.find(function(x) { return x.id === id; });
+  if (!f) return;
+  currentViewId = id;
+  var s = getStatus(f);
+  var saldo = getSaldo(f);
+
+  var html = '<div class="detail-grid">' +
+    '<div class="detail-item"><div class="dl">Proveedor</div><div class="dv">'+escH(f.proveedor)+'</div></div>' +
+    '<div class="detail-item"><div class="dl">N. Factura</div><div class="dv">'+escH(f.numFactura)+'</div></div>' +
+    '<div class="detail-item"><div class="dl">Emisión</div><div class="dv">'+fmtDate(f.fechaEmision)+'</div></div>' +
+    '<div class="detail-item"><div class="dl">Vencimiento</div><div class="dv">'+fmtDate(f.fechaVenc)+'</div></div>' +
+    '<div class="detail-item"><div class="dl">Estado</div><div class="dv"><span class="status status-'+s.toLowerCase()+'">'+s+'</span></div></div>' +
+    '<div class="detail-item"><div class="dl">Saldo</div><div class="dv" style="color:'+(saldo > 0 ? 'var(--yellow)' : 'var(--green)')+'">'+fmtCur(saldo)+'</div></div>' +
+  '</div>';
+
+  // Items table
+  html += '<div style="font-weight:700;margin-bottom:6px;font-size:13px">Productos</div>';
+  html += '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Producto</th><th>Cant</th><th>Costo/U</th><th>Subtotal</th></tr></thead><tbody>';
+  f.items.forEach(function(it, i) {
+    html += '<tr><td style="color:var(--muted)">'+(i+1)+'</td><td>'+escH(it.nombre)+'</td><td style="text-align:center;font-weight:600">'+it.qty+'</td><td style="text-align:right">'+fmtCur(it.costoUnit)+'</td><td style="text-align:right;font-weight:600">'+fmtCur(it.subtotal)+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Totals
+  html += '<div class="inv-totals" style="margin-top:8px">' +
+    '<div class="row"><span>Subtotal</span><span>'+fmtCur(f.subtotal)+'</span></div>' +
+    '<div class="row"><span>IVA (15%)</span><span>'+fmtCur(f.iva)+'</span></div>' +
+    '<div class="row total"><span>TOTAL</span><span>'+fmtCur(f.total)+'</span></div>' +
+  '</div>';
+
+  if (f.observaciones) {
+    html += '<div style="margin-top:12px;padding:10px;background:#0f172a;border-radius:8px;font-size:12px;color:var(--muted)"><strong>Observaciones:</strong> '+escH(f.observaciones)+'</div>';
+  }
+
+  // Pagos history
+  if (f.pagos && f.pagos.length > 0) {
+    html += '<div style="font-weight:700;margin:16px 0 6px;font-size:13px">Historial de Pagos</div>';
+    html += '<div class="pagos-list">';
+    f.pagos.forEach(function(p) {
+      var metodos = {transferencia:'Transferencia',efectivo:'Efectivo',cheque:'Cheque',tarjeta:'Tarjeta'};
+      html += '<div class="pago-item">' +
+        '<div><span style="color:var(--muted);font-size:11px">'+fmtDate(p.fecha)+'</span> · '+(metodos[p.metodo]||p.metodo)+(p.referencia ? ' · Ref: '+escH(p.referencia) : '')+'</div>' +
+        '<div class="pago-amt">'+fmtCur(p.monto)+'</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('detalleContent').innerHTML = html;
+
+  // Show/hide buttons
+  document.getElementById('btnPagarDetalle').style.display = s === 'Pagada' ? 'none' : '';
+  document.getElementById('btnAprobar').style.display = s === 'Pendiente' ? '' : 'none';
+
+  document.getElementById('modalDetalle').classList.add('open');
+}
+
+// ═══ APROBAR FACTURA ════════════════════════════════════════
+function aprobarFactura() {
+  var f = facturas.find(function(x) { return x.id === currentViewId; });
+  if (!f) return;
+  f.estado = 'Aprobada';
+  saveData();
+  renderAll();
+  closeModal('modalDetalle');
+  toast('Factura aprobada', 'ok');
+}
+
+// ═══ ELIMINAR FACTURA ═══════════════════════════════════════
+function eliminarFactura(id) {
+  if (!confirm('¿Eliminar esta factura? Esta acción no se puede deshacer.')) return;
+  facturas = facturas.filter(function(f) { return f.id !== id; });
+  saveData();
+  renderAll();
+  toast('Factura eliminada', 'ok');
+}
+
+// ═══ PAGO ═══════════════════════════════════════════════════
+function openPago() {
+  var f = facturas.find(function(x) { return x.id === currentViewId; });
+  if (!f) return;
+  var saldo = getSaldo(f);
+  document.getElementById('pagoSaldo').value = fmtCur(saldo);
+  document.getElementById('pagoMonto').value = saldo.toFixed(2);
+  document.getElementById('pagoMonto').max = saldo.toFixed(2);
+  document.getElementById('pagoFecha').value = today();
+  document.getElementById('pagoRef').value = '';
+  document.getElementById('pagoMetodo').value = 'transferencia';
+  document.getElementById('modalPago').classList.add('open');
+}
+
+function guardarPago() {
+  var f = facturas.find(function(x) { return x.id === currentViewId; });
+  if (!f) return;
+  var monto = parseFloat(document.getElementById('pagoMonto').value);
+  var saldo = getSaldo(f);
+  if (!monto || monto <= 0) { toast('Ingrese un monto válido', 'err'); return; }
+  if (monto > saldo + 0.01) { toast('El monto excede el saldo pendiente', 'err'); return; }
+
+  var pago = {
+    id: genId(),
+    monto: monto,
+    fecha: document.getElementById('pagoFecha').value,
+    metodo: document.getElementById('pagoMetodo').value,
+    referencia: document.getElementById('pagoRef').value.trim(),
+    registradoPor: (window.BXD_USER && BXD_USER.name) || 'usuario',
+    registradoEl: new Date().toISOString()
+  };
+
+  if (!f.pagos) f.pagos = [];
+  f.pagos.push(pago);
+
+  // Check if fully paid
+  var nuevoSaldo = getSaldo(f);
+  if (nuevoSaldo <= 0.01) {
+    f.estado = 'Pagada';
+  }
+
+  saveData();
+  renderAll();
+  closeModal('modalPago');
+  closeModal('modalDetalle');
+  toast('Pago de ' + fmtCur(monto) + ' registrado', 'ok');
+}
+
+// ═══ PRINT INVOICE ══════════════════════════════════════════
+function printCurrentInvoice() {
+  var f = facturas.find(function(x) { return x.id === currentViewId; });
+  if (!f) { toast('Error: factura no encontrada', 'err'); return; }
+
+  var s = getStatus(f);
+  var saldo = getSaldo(f);
+  var totalPagado = parseFloat(f.total) - saldo;
+
+  var html = '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;color:#222;max-width:780px;margin:0 auto;padding:20px;font-size:12px;line-height:1.4">';
+
+  // Header
+  html += '<table style="width:100%;border-collapse:collapse;margin-bottom:0"><tr>';
+  html += '<td style="vertical-align:top;padding:0;border:none;font-size:10px;color:#555;line-height:1.5">';
+  html += '<b style="font-size:14px;color:#1a56db">'+COMPANY.nombre+'</b><br>';
+  html += COMPANY.direccion+' · '+COMPANY.ciudad+'<br>';
+  html += 'Tel: '+COMPANY.tel+' · RUC: '+COMPANY.ruc+'<br>'+COMPANY.email+'</td>';
+  html += '<td style="vertical-align:top;text-align:right;padding:0;border:none;white-space:nowrap">';
+  html += '<span style="font-size:10px;font-weight:700;color:#fff;background:#1a56db;padding:3px 10px;display:inline-block">FACTURA DE PROVEEDOR</span><br>';
+  html += '<b style="font-size:16px;color:#1a56db">'+escH(f.numFactura)+'</b><br>';
+  html += '<span style="font-size:10px;color:#666">Emisión: '+fmtDate(f.fechaEmision)+'</span><br>';
+  html += '<span style="font-size:10px;color:#666">Vence: '+fmtDate(f.fechaVenc)+'</span></td>';
+  html += '</tr></table>';
+  html += '<div style="border-bottom:2px solid #1a56db;margin:8px 0 12px"></div>';
+
+  // Proveedor
+  html += '<div style="font-size:11px;margin-bottom:10px;padding:6px 10px;background:#f8f9fa;border-radius:4px">';
+  html += '<b style="font-size:12px">Proveedor: '+escH(f.proveedor)+'</b>';
+  html += ' · Estado: <b style="color:'+(s==='Pagada'?'#059669':s==='Vencida'?'#dc2626':'#1a56db')+'">'+s+'</b>';
+  html += '</div>';
+
+  // Items
+  html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<tr style="background:#eef;border-bottom:1px solid #ccc">';
+  html += '<th style="padding:4px 6px;text-align:left;font-size:9px;text-transform:uppercase;color:#555">#</th>';
+  html += '<th style="padding:4px 6px;text-align:left;font-size:9px;text-transform:uppercase;color:#555">Producto</th>';
+  html += '<th style="padding:4px 6px;text-align:center;font-size:9px;text-transform:uppercase;color:#555">Cant</th>';
+  html += '<th style="padding:4px 6px;text-align:right;font-size:9px;text-transform:uppercase;color:#555">Costo/U</th>';
+  html += '<th style="padding:4px 6px;text-align:right;font-size:9px;text-transform:uppercase;color:#555">Subtotal</th>';
+  html += '</tr>';
+  f.items.forEach(function(it, i) {
+    html += '<tr style="border-bottom:1px solid #eee">';
+    html += '<td style="padding:3px 6px;color:#999">'+(i+1)+'</td>';
+    html += '<td style="padding:3px 6px">'+escH(it.nombre)+'</td>';
+    html += '<td style="padding:3px 6px;text-align:center;font-weight:600">'+it.qty+'</td>';
+    html += '<td style="padding:3px 6px;text-align:right">'+fmtCur(it.costoUnit)+'</td>';
+    html += '<td style="padding:3px 6px;text-align:right;font-weight:600">'+fmtCur(it.subtotal)+'</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+
+  // Totals
+  html += '<table style="margin-left:auto;font-size:11px;border-collapse:collapse;margin-top:6px">';
+  html += '<tr><td style="padding:3px 10px;color:#666;border:none">Subtotal</td><td style="padding:3px 10px;text-align:right;border:none">'+fmtCur(f.subtotal)+'</td></tr>';
+  html += '<tr><td style="padding:3px 10px;color:#666;border:none">IVA (15%)</td><td style="padding:3px 10px;text-align:right;border:none">'+fmtCur(f.iva)+'</td></tr>';
+  html += '<tr style="border-top:2px solid #059669"><td style="padding:5px 10px;font-size:15px;font-weight:800;color:#059669;border:none">TOTAL</td><td style="padding:5px 10px;text-align:right;font-size:15px;font-weight:800;color:#059669;border:none">'+fmtCur(f.total)+'</td></tr>';
+  html += '</table>';
+
+  // Payment info
+  if (f.pagos && f.pagos.length > 0) {
+    html += '<div style="margin-top:12px;border-top:1px solid #ddd;padding-top:8px">';
+    html += '<b style="font-size:11px">Pagos Realizados:</b>';
+    var metodos = {transferencia:'Transferencia',efectivo:'Efectivo',cheque:'Cheque',tarjeta:'Tarjeta'};
+    f.pagos.forEach(function(p) {
+      html += '<div style="font-size:10px;padding:3px 0">'+fmtDate(p.fecha)+' · '+(metodos[p.metodo]||p.metodo)+' · <b>'+fmtCur(p.monto)+'</b>'+(p.referencia?' · Ref: '+escH(p.referencia):'')+'</div>';
+    });
+    html += '<div style="font-size:11px;margin-top:4px;font-weight:700">Total Pagado: '+fmtCur(totalPagado)+' · Saldo: '+fmtCur(saldo)+'</div>';
+    html += '</div>';
+  }
+
+  if (f.observaciones) {
+    html += '<div style="margin-top:8px;padding:4px 10px;background:#fffbeb;font-size:10px;border-radius:4px"><b>Observaciones:</b> '+escH(f.observaciones)+'</div>';
+  }
+
+  // Footer
+  html += '<div style="margin-top:16px;padding-top:6px;border-top:1px solid #ddd;text-align:center;font-size:9px;color:#999">';
+  html += COMPANY.nombre+' · RUC: '+COMPANY.ruc+' · '+COMPANY.tel+' · '+COMPANY.email+' · '+COMPANY.web;
+  html += '</div>';
+  html += '</div>';
+
+  // Open print window
+  var win = window.open('', '_blank', 'width=850,height=700');
+  if (!win) { toast('Permite ventanas emergentes para imprimir', 'err'); return; }
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CxP-'+escH(f.numFactura)+'</title>');
+  win.document.write('<style>@page{margin:8mm 10mm}*{box-sizing:border-box}body{margin:0;padding:0}</style>');
+  win.document.write('</head><body>');
+  win.document.write(html);
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(function() { win.print(); }, 400);
+}
+
+</script>
+</body>
+</html>
