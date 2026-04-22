@@ -321,7 +321,6 @@ td{padding:8px 12px;vertical-align:middle}
 .doc-type-btn:hover{border-color:var(--pri);color:var(--pri)}
 .doc-type-btn.sel{border-color:var(--pri);background:#e0e7ff;color:var(--pri-d)}
 .doc-type-btn.sel.nota{border-color:var(--green);background:#dcfce7;color:#166534}
-.doc-type-btn.sel.factura{border-color:var(--pri);background:#e0e7ff;color:var(--pri-d)}
 .doc-type-btn.sel.cotizacion{border-color:var(--yellow);background:#fef9c3;color:#854d0e}
 
 
@@ -546,7 +545,6 @@ td{padding:8px 12px;vertical-align:middle}
       </div>
       <div class="doc-type-row no-print">
         <div class="doc-type-btn nota sel" id="dtNota" onclick="setDocType('nota')">📋 Nota de Venta</div>
-        <div class="doc-type-btn factura" id="dtFactura" onclick="setDocType('factura')">🧾 Factura</div>
         <div class="doc-type-btn cotizacion" id="dtCotizacion" onclick="setDocType('cotizacion')">📝 Cotización</div>
       </div>
       <p id="docTypeLabel">NOTA DE VENTA</p>
@@ -795,7 +793,7 @@ td{padding:8px 12px;vertical-align:middle}
     <div class="ship-form" id="shipForm">
       <!-- LOAD FROM INVOICE -->
       <div class="ship-load-row no-print">
-        <span style="font-size:12px;font-weight:700;color:var(--pri)">📋 Cargar desde factura:</span>
+        <span style="font-size:12px;font-weight:700;color:var(--pri)">📋 Cargar desde documento:</span>
         <input type="number" id="shipFactNum" placeholder="Nº Fact" min="1">
         <button class="btn btn-pri btn-sm" onclick="cargarEnvioDesdeFactura()">Cargar</button>
         <button class="btn btn-w btn-sm" style="border:1px solid var(--border)" onclick="copiarDatosCliente()">📋 Copiar datos del cliente actual</button>
@@ -904,7 +902,6 @@ td{padding:8px 12px;vertical-align:middle}
     <div style="display:flex;gap:4px">
       <button class="hist-filter-btn sel" data-type="all" onclick="setHistFilter('all')">Todos</button>
       <button class="hist-filter-btn" data-type="nota" onclick="setHistFilter('nota')">📋 Notas</button>
-      <button class="hist-filter-btn" data-type="factura" onclick="setHistFilter('factura')">🧾 Facturas</button>
       <button class="hist-filter-btn" data-type="cotizacion" onclick="setHistFilter('cotizacion')">📝 Cotizaciones</button>
     </div>
   </div>
@@ -936,7 +933,7 @@ td{padding:8px 12px;vertical-align:middle}
   <input type="hidden" id="notaCDFactIdx">
   <input type="hidden" id="notaCDTipo">
   <div style="margin-bottom:12px">
-    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Factura vinculada</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Documento vinculado</div>
     <div id="notaCDFactRef" style="font-weight:700;font-size:14px;color:var(--pri)"></div>
   </div>
   <div style="margin-bottom:12px">
@@ -1602,7 +1599,6 @@ function renderShipProducts(items) {
 let currentDocType = 'nota';
 const docTypeConfig = {
   nota:      { label: 'NOTA DE VENTA', icon: '📋', emitLabel: 'Emitir Nota de Venta', prefix: 'NV', color: '#059669' },
-  factura:   { label: 'FACTURA',       icon: '🧾', emitLabel: 'Emitir Factura',       prefix: 'FA', color: '#1a56db' },
   cotizacion:{ label: 'COTIZACIÓN',    icon: '📝', emitLabel: 'Emitir Cotización',    prefix: 'CT', color: '#d97706' }
 };
 
@@ -2491,7 +2487,7 @@ function setHistFilter(type) {
   renderHistorial();
 }
 
-// ── CONVERTIR DOCUMENTO (Cotización → NV → Factura) ────
+// ── CONVERTIR DOCUMENTO (Cotización → NV) ────
 function convertirDoc(idx, destino) {
   var f = facturas[idx];
   if (!f) return;
@@ -2513,7 +2509,7 @@ function convertirDoc(idx, destino) {
     taxPct: f.taxPct,
     tax: f.tax,
     total: f.total,
-    tipoDoc: destino === 'factura' ? 'factura' : 'nota',
+    tipoDoc: destino,
     tipoDocLabel: destCfg.label,
     tipoDocPrefix: destCfg.prefix,
     estado: 'EMITIDA',
@@ -2526,7 +2522,6 @@ function convertirDoc(idx, destino) {
   };
 
   // Only deduct inventory if converting FROM cotización (cotizaciones don't deduct stock)
-  // Notas de venta already deducted stock, so converting NV→FA should NOT deduct again
   if (f.tipoDoc === 'cotizacion') {
     nuevo.items.forEach(function(it) {
       var current = getStock(it.id);
@@ -2585,7 +2580,7 @@ function renderHistorial() {
   list.innerHTML = filtered.map(function(x) {
     var f = x.f, i = x.idx;
     var anulada = f.estado === 'ANULADA';
-    var typeColors = {nota:'#059669',factura:'#1a56db',cotizacion:'#d97706',nota_credito:'#dc2626',nota_debito:'#d97706'};
+    var typeColors = {nota:'#059669',cotizacion:'#d97706',nota_credito:'#dc2626',nota_debito:'#d97706'};
     var typeColor = typeColors[f.tipoDoc] || '#64748b';
     // Estado badge
     var estadoColors = {EMITIDA:'#3b82f6',APROBADA:'#059669',FACTURADA:'#8b5cf6',ANULADA:'#dc2626',CONVERTIDA:'#8b5cf6'};
@@ -2598,8 +2593,6 @@ function renderHistorial() {
     var convertBtns = '';
     if (!anulada && f.estado !== 'CONVERTIDA' && f.estado !== 'FACTURADA') {
       if (f.tipoDoc === 'cotizacion') convertBtns = '<button class="btn btn-sm" style="background:#059669;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'nota\')">→ NV</button>';
-      if (f.tipoDoc === 'nota') convertBtns = '<button class="btn btn-sm" style="background:#1a56db;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'factura\')">→ Factura</button>';
-      if (f.tipoDoc === 'cotizacion') convertBtns += ' <button class="btn btn-sm" style="background:#1a56db;color:#fff;font-size:10px" onclick="event.stopPropagation();convertirDoc('+i+',\'factura\')">→ FA</button>';
     }
     return '<div class="inv-list-item" style="'+(anulada ? 'opacity:.5;' : '')+'">'
       + '<div class="inv-li-left" onclick="verFactura('+i+')" style="flex:1;cursor:pointer">'
@@ -2754,14 +2747,10 @@ function verFactura(idx) {
     if (f.estado !== 'FACTURADA') {
       if (f.tipoDoc === 'cotizacion') {
         cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#059669;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'nota\')">→ NV</button>';
-        cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ FA</button>';
-      }
-      if (f.tipoDoc === 'nota') {
-        cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#1a56db;font-size:12px" onclick="closeModal(\'modalVerFact\');convertirDoc('+idx+',\'factura\')">→ Factura</button>';
       }
     }
-    // NC/ND buttons for facturas and notas
-    if (f.tipoDoc === 'nota' || f.tipoDoc === 'factura') {
+    // NC/ND buttons for notas
+    if (f.tipoDoc === 'nota') {
       cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#dc2626;font-size:11px" onclick="abrirNotaCD('+idx+',\'credito\')">NC</button>';
       cbDiv.innerHTML += '<button class="btn btn-pri" style="background:#d97706;font-size:11px" onclick="abrirNotaCD('+idx+',\'debito\')">ND</button>';
     }
@@ -3159,6 +3148,204 @@ function showToast(msg,type='') {
 }
 
 init();
+</script>
+
+<!-- ═══ FLOATING CHAT WIDGET ═══ -->
+<style>
+.chat-fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,#1E40AF,#1E3A8A);color:#fff;border:none;font-size:1.6rem;
+  cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:600;display:flex;align-items:center;
+  justify-content:center;transition:all .2s}
+.chat-fab:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(0,0,0,.4)}
+.chat-badge{position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:10px;
+  font-weight:800;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;padding:0 5px;border:2px solid #fff}
+.chat-badge:empty{display:none}
+.chat-panel{position:fixed;bottom:86px;right:20px;width:360px;height:480px;background:#fff;
+  border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.25);z-index:600;display:none;
+  flex-direction:column;overflow:hidden;border:1px solid #e2e8f0}
+.chat-panel.open{display:flex}
+.chat-panel-hdr{background:linear-gradient(135deg,#1E3A8A,#1E40AF);color:#fff;padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between}
+.chat-panel-hdr h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
+.chat-panel-hdr .close-chat{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.7}
+.chat-panel-hdr .close-chat:hover{opacity:1}
+.chat-panel-hdr .open-full{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  color:#fff;padding:3px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;text-decoration:none}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:3px;background:#f8fafc}
+.cm-wrap{display:flex;flex-direction:column;margin-bottom:1px}
+.cm-wrap.mine{align-items:flex-end}
+.cm-wrap.other{align-items:flex-start}
+.cm-sender{font-size:9px;font-weight:700;color:#64748b;margin-bottom:1px;padding:0 4px}
+.cm-bubble{max-width:80%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4;word-wrap:break-word}
+.cm-bubble.mine{background:#1E40AF;color:#fff;border-bottom-right-radius:4px}
+.cm-bubble.other{background:#fff;color:#1e293b;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
+.cm-time{font-size:9px;opacity:.5;margin-top:2px;text-align:right}
+.cm-date{text-align:center;margin:8px 0 4px;font-size:10px;color:#64748b}
+.cm-date span{background:#e2e8f0;padding:2px 10px;border-radius:8px}
+.cm-empty{text-align:center;color:#94a3b8;font-size:12px;padding:20px}
+.chat-input-area{border-top:1px solid #e2e8f0;padding:8px 10px;display:flex;gap:6px;align-items:center;background:#fff}
+.chat-input-area input{flex:1;border:1.5px solid #e2e8f0;border-radius:20px;padding:8px 14px;
+  font-size:13px;outline:none;font-family:inherit}
+.chat-input-area input:focus{border-color:#3b82f6}
+.chat-send-btn{width:36px;height:36px;border-radius:50%;background:#1E40AF;color:#fff;border:none;
+  font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.chat-send-btn:hover{background:#1E3A8A}
+@media(max-width:500px){.chat-panel{width:calc(100vw - 20px);right:10px;bottom:80px;height:60vh}}
+</style>
+
+<button class="chat-fab" id="chatFab" onclick="toggleChatPanel()">
+  💬<span class="chat-badge" id="chatBadge"></span>
+</button>
+
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-panel-hdr">
+    <h3>💬 Chat Interno</h3>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="Chat_BoxDental.html" class="open-full">Abrir completo</a>
+      <button class="close-chat" onclick="toggleChatPanel()">✕</button>
+    </div>
+  </div>
+  <div class="chat-msgs" id="chatMsgs"><div class="cm-empty">Conectando...</div></div>
+  <div class="chat-input-area">
+    <input type="text" id="chatMsgInput" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+    <button class="chat-send-btn" onclick="sendChatMsg()">➤</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var chatDb = null;
+  var chatUserId = '';
+  var chatUserName = '';
+  var chatOpen = false;
+  var chatUnread = 0;
+  var chatLastSeen = parseInt(localStorage.getItem('bxd_chat_lastseen') || '0');
+  var chatUnsub = null;
+
+  // Get session
+  var raw = sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1');
+  if (raw) {
+    try {
+      var s = JSON.parse(raw);
+      chatUserId = s.user;
+      chatUserName = s.name;
+    } catch(e){}
+  }
+
+  function waitForFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+      chatDb = firebase.firestore();
+      startChatListener();
+    } else {
+      setTimeout(waitForFirebase, 500);
+    }
+  }
+
+  function startChatListener() {
+    if (!chatDb) return;
+    var ref = chatDb.collection('app_data').doc('chat_messages').collection('msgs')
+      .orderBy('ts', 'asc').limitToLast(100);
+    chatUnsub = ref.onSnapshot(function(snap) {
+      var msgs = [];
+      snap.forEach(function(d) { msgs.push({id: d.id, data: d.data()}); });
+      renderChatMsgs(msgs);
+      // Update unread
+      if (!chatOpen && msgs.length > 0) {
+        var newCount = 0;
+        msgs.forEach(function(m) {
+          var ts = m.data.ts;
+          if (ts && ts.seconds && (ts.seconds * 1000) > chatLastSeen && m.data.userId !== chatUserId) newCount++;
+        });
+        chatUnread = newCount;
+        document.getElementById('chatBadge').textContent = chatUnread > 0 ? chatUnread : '';
+      }
+    }, function(err) {
+      console.warn('Chat listener error:', err.message);
+      document.getElementById('chatMsgs').innerHTML = '<div class="cm-empty">Error de conexion</div>';
+    });
+  }
+
+  function renderChatMsgs(msgs) {
+    var area = document.getElementById('chatMsgs');
+    if (msgs.length === 0) {
+      area.innerHTML = '<div class="cm-empty">No hay mensajes. Escribe el primero!</div>';
+      return;
+    }
+    var html = '';
+    var lastDate = '';
+    msgs.forEach(function(m) {
+      var d = m.data;
+      var ts = d.ts;
+      var dateStr = '';
+      var timeStr = '';
+      if (ts && ts.seconds) {
+        var dt = new Date(ts.seconds * 1000);
+        dateStr = dt.toLocaleDateString('es-EC', {day:'numeric', month:'short'});
+        timeStr = dt.toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
+      }
+      if (dateStr && dateStr !== lastDate) {
+        html += '<div class="cm-date"><span>' + dateStr + '</span></div>';
+        lastDate = dateStr;
+      }
+      var isMine = d.userId === chatUserId;
+      html += '<div class="cm-wrap ' + (isMine ? 'mine' : 'other') + '">';
+      if (!isMine) html += '<div class="cm-sender">' + escChat(d.userName || 'Usuario') + '</div>';
+      html += '<div class="cm-bubble ' + (isMine ? 'mine' : 'other') + '">';
+      if (d.type === 'image' && d.imageData) {
+        html += '<img src="' + d.imageData + '" style="max-width:200px;border-radius:8px;display:block">';
+        if (d.text) html += '<div style="margin-top:4px">' + escChat(d.text) + '</div>';
+      } else if (d.type === 'audio' && d.audioData) {
+        html += '<audio controls src="' + d.audioData + '" style="height:32px"></audio>';
+      } else {
+        html += escChat(d.text || '');
+      }
+      html += '<div class="cm-time">' + timeStr + '</div>';
+      html += '</div></div>';
+    });
+    area.innerHTML = html;
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function escChat(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  window.toggleChatPanel = function() {
+    chatOpen = !chatOpen;
+    document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+    if (chatOpen) {
+      chatUnread = 0;
+      document.getElementById('chatBadge').textContent = '';
+      chatLastSeen = Date.now();
+      localStorage.setItem('bxd_chat_lastseen', chatLastSeen);
+      var area = document.getElementById('chatMsgs');
+      area.scrollTop = area.scrollHeight;
+      document.getElementById('chatMsgInput').focus();
+    }
+  };
+
+  window.sendChatMsg = function() {
+    var input = document.getElementById('chatMsgInput');
+    var text = input.value.trim();
+    if (!text || !chatDb) return;
+    chatDb.collection('app_data').doc('chat_messages').collection('msgs').add({
+      text: text,
+      userId: chatUserId,
+      userName: chatUserName,
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      type: 'text'
+    }).then(function() {
+      input.value = '';
+    }).catch(function(e) {
+      console.warn('Send error:', e.message);
+    });
+  };
+
+  waitForFirebase();
+})();
 </script>
 </body>
 </html>

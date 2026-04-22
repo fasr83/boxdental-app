@@ -144,6 +144,20 @@ td{padding:6px 10px;vertical-align:middle}
 .badge-critical{background:#fee2e2;color:#991b1b}
 .badge-exp{background:#fee2e2;color:#991b1b}
 .badge-exp-soon{background:#fef9c3;color:#854d0e}
+.badge-sinstock{background:#fecaca;color:#dc2626;font-weight:700;animation:pulse-red 1.5s infinite}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.6}}
+.ventas-btn{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:600}
+.ventas-btn:hover{background:#dbeafe}
+.pvp-row{display:flex;gap:8px;align-items:center}
+.pvp-row input{flex:1}
+.pvp-result{background:#dcfce7;color:#166534;padding:8px 12px;border-radius:8px;font-weight:700;font-size:1rem;text-align:center;margin-top:4px}
+.ventas-hist{margin-top:16px;border-top:1px solid var(--border);padding-top:12px}
+.ventas-hist h3{font-size:14px;margin-bottom:8px;color:var(--primary)}
+.ventas-hist table{width:100%;font-size:12px;border-collapse:collapse}
+.ventas-hist th{background:var(--bg);padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)}
+.ventas-hist td{padding:5px 8px;border-bottom:1px solid #f0f0f0}
+.ventas-hist .total-row{background:#eff6ff;font-weight:700}
+.ventas-hist .sin-ventas{color:var(--muted);font-size:12px;padding:12px;text-align:center}
 .c-extra{font-size:11px;color:var(--muted);min-width:80px}
 .c-prov{font-size:11px;color:var(--muted);min-width:100px;max-width:130px}
 .prov-chip{background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:10px;
@@ -443,13 +457,25 @@ td{padding:6px 10px;vertical-align:middle}
   <div class="form-2col">
     <div class="form-row">
       <label>Precio de Costo (USD)</label>
-      <input type="number" id="detalleCosto" step="0.0001" min="0">
+      <input type="number" id="detalleCosto" step="0.0001" min="0" oninput="calcPVP()">
     </div>
     <div class="form-row">
       <label>Stock Mínimo (alertar bajo)</label>
       <input type="number" id="detalleStockMin" step="1" min="0" placeholder="ej. 5">
     </div>
   </div>
+
+  <div class="form-2col">
+    <div class="form-row">
+      <label>% Ganancia</label>
+      <input type="number" id="detallePctGanancia" step="0.1" min="0" placeholder="ej. 30" oninput="calcPVP()">
+    </div>
+    <div class="form-row">
+      <label>PVP (Precio de Venta)</label>
+      <input type="number" id="detallePVP" step="0.01" min="0" readonly style="background:#f0fdf4;font-weight:700;color:#166534">
+    </div>
+  </div>
+  <div class="pvp-result" id="pvpPreview" style="display:none"></div>
 
   <div class="form-row">
     <label>Número de Lote</label>
@@ -476,9 +502,22 @@ td{padding:6px 10px;vertical-align:middle}
     </div>
   </div>
 
+  <div class="ventas-hist" id="detalleVentas"></div>
+
   <div class="modal-footer">
     <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeDetalle()">Cancelar</button>
     <button class="btn btn-success" onclick="guardarDetalle()">💾 Guardar Cambios</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL HISTORIAL VENTAS -->
+<div class="overlay" id="modalHistVentas">
+<div class="modal" style="max-width:600px">
+  <h2 id="histVentasTitle">📊 Historial de Ventas</h2>
+  <div id="histVentasBody"></div>
+  <div class="modal-footer">
+    <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeModal('modalHistVentas')">Cerrar</button>
   </div>
 </div>
 </div>
@@ -544,13 +583,16 @@ td{padding:6px 10px;vertical-align:middle}
   <div class="form-2col">
     <div class="form-row">
       <label>Precio de Costo (USD) *</label>
-      <input type="number" id="npCosto" step="0.0001" min="0" placeholder="0.0000">
+      <input type="number" id="npCosto" step="0.0001" min="0" placeholder="0.0000" oninput="calcNpPVP()">
     </div>
     <div class="form-row">
-      <label>Precio de Venta (USD)</label>
-      <input type="number" id="npPrecio" step="0.01" min="0" placeholder="Auto +40%">
+      <label>% Ganancia</label>
+      <input type="number" id="npPctGanancia" step="0.1" min="0" placeholder="ej. 30" oninput="calcNpPVP()">
     </div>
   </div>
+  <div class="pvp-result" id="npPvpPreview" style="display:none"></div>
+  <input type="hidden" id="npPrecio">
+  <input type="hidden" id="npPVPCalc">
   <div class="form-2col">
     <div class="form-row">
       <label>Stock Mínimo</label>
@@ -853,7 +895,7 @@ function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 // ── NUEVO PRODUCTO ────────────────────────────────────────
 function openNuevoProd() {
   // Clear form
-  ['npNombre','npCosto','npPrecio','npStockMin','npCantidad','npLote','npFechFab','npFechCad'].forEach(id => {
+  ['npNombre','npCosto','npPrecio','npPctGanancia','npPVPCalc','npStockMin','npCantidad','npLote','npFechFab','npFechCad'].forEach(id => {
     document.getElementById(id).value = '';
   });
   // Populate category select
@@ -865,8 +907,30 @@ function openNuevoProd() {
   const pSel = document.getElementById('npProveedor');
   pSel.innerHTML = '<option value="">— Sin proveedor —</option>';
   proveedores.forEach(p => { const o = document.createElement('option'); o.value=p; o.textContent=p; pSel.appendChild(o); });
+  document.getElementById('npPvpPreview').style.display = 'none';
   document.getElementById('modalNuevo').classList.add('open');
   setTimeout(() => document.getElementById('npNombre').focus(), 100);
+}
+
+function calcNpPVP() {
+  const costo = parseFloat(document.getElementById('npCosto').value) || 0;
+  const pct = parseFloat(document.getElementById('npPctGanancia').value) || 0;
+  const pvp = costo * (1 + pct / 100);
+  document.getElementById('npPrecio').value = pvp.toFixed(2);
+  document.getElementById('npPVPCalc').value = pvp.toFixed(2);
+  const preview = document.getElementById('npPvpPreview');
+  if (pct > 0 && costo > 0) {
+    const ganancia = pvp - costo;
+    preview.style.display = 'block';
+    preview.innerHTML = `💰 Costo: $${costo.toFixed(2)} + ${pct}% = <strong>PVP: $${pvp.toFixed(2)}</strong> (Ganancia: $${ganancia.toFixed(2)})`;
+  } else if (costo > 0) {
+    const auto = costo * 1.4;
+    preview.style.display = 'block';
+    preview.innerHTML = `💡 Sin % → PVP automático: <strong>$${auto.toFixed(2)}</strong> (+40%)`;
+    document.getElementById('npPrecio').value = auto.toFixed(2);
+  } else {
+    preview.style.display = 'none';
+  }
 }
 
 function guardarNuevoProd() {
@@ -879,6 +943,7 @@ function guardarNuevoProd() {
   const catSel = document.getElementById('npCategoria').value;
   const categoria = catNueva || catSel;
   if (!categoria) { toast('⚠️ Selecciona o escribe una categoría', 'err'); return; }
+  const pctG = parseFloat(document.getElementById('npPctGanancia').value);
   const precioVal = parseFloat(document.getElementById('npPrecio').value);
   const precio = (!isNaN(precioVal) && precioVal > 0) ? precioVal : parseFloat((costoVal * 1.4).toFixed(2));
   const id = nextCustomId++;
@@ -893,6 +958,8 @@ function guardarNuevoProd() {
   const proveedor = document.getElementById('npProveedor').value;
   extras[id] = {
     stockMin: (!isNaN(stockMin) && stockMin >= 0) ? stockMin : null,
+    pctGanancia: (!isNaN(pctG) && pctG >= 0) ? pctG : null,
+    pvp: precio,
     lote, fechFab, fechCad, proveedor
   };
   if (!isNaN(cantidad) && cantidad >= 0) conteos[id] = cantidad;
@@ -1097,6 +1164,7 @@ function render() {
       <th class="c-img">IMG</th>
       <th class="c-name">PRODUCTO</th>
       <th class="c-cost">COSTO</th>
+      <th class="c-cost">PVP</th>
       <th class="c-min" title="Stock mínimo para alerta">MIN</th>
       <th class="c-qty">CANTIDAD</th>
       <th style="text-align:right;min-width:85px">TOTAL</th>
@@ -1123,8 +1191,10 @@ function render() {
       else if (low) rowClass = 'low-stock';
       else if (counted) rowClass = 'counted';
       // badges
+      const zeroStock = counted && parseFloat(qty) === 0;
       let badge = '';
       if (exp) badge = '<span class="badge badge-exp">VENCIDO</span>';
+      else if (zeroStock) badge = '<span class="badge badge-sinstock">SIN STOCK</span>';
       else if (expSoon) badge = '<span class="badge badge-exp-soon">Vence pronto</span>';
       else if (low) badge = '<span class="badge badge-low">BAJO STOCK</span>';
       else if (counted) badge = '<span class="badge badge-ok">OK</span>';
@@ -1149,6 +1219,7 @@ function render() {
             <span class="cost-val" id="ctxt-${p.id}" onclick="startEditCost(${p.id})">${fmtCur(costo)}</span>
           </div>
         </td>
+        <td class="c-cost" style="color:#166534;font-weight:600">${getExtra(p.id,'pvp') ? fmtCur(getExtra(p.id,'pvp')) : '—'}</td>
         <td class="c-min">
           <input type="number" class="min-input" min="0" step="1" value="${getStockMin(p.id) || ''}"
             placeholder="—" title="Stock mínimo para alerta"
@@ -1173,6 +1244,7 @@ function render() {
         <td class="c-prov">${provCell}</td>
         <td class="c-act" style="display:flex;gap:3px;align-items:center">
           <button class="act-btn" onclick="openDetalle(${p.id})" title="Editar detalles">⚙</button>
+          <button class="ventas-btn" onclick="verHistorialVentas(${p.id})" title="Historial de ventas">📊</button>
           ${isCustom(p.id) ? `<button class="act-btn" onclick="deleteCustomProd(${p.id})" title="Eliminar producto" style="color:var(--red)">🗑</button>` : ''}
         </td>
       </tr>`;
@@ -1232,7 +1304,9 @@ function updateRowUI(id) {
   if (tds[6]) tds[6].textContent = qty !== null ? fmtCur(parseFloat(qty) * costo) : '—';
   // badge
   let badge = '';
+  const zeroStock = qty !== null && parseFloat(qty) === 0;
   if (exp) badge = '<span class="badge badge-exp">VENCIDO</span>';
+  else if (zeroStock) badge = '<span class="badge badge-sinstock">SIN STOCK</span>';
   else if (expSoon) badge = '<span class="badge badge-exp-soon">Vence pronto</span>';
   else if (low) badge = '<span class="badge badge-low">BAJO STOCK</span>';
   else if (qty !== null) badge = '<span class="badge badge-ok">OK</span>';
@@ -1378,8 +1452,18 @@ function openDetalle(id) {
   } else {
     imgPrev.innerHTML = '<span id="imgPlaceholder">📷 Clic para agregar imagen</span>';
   }
+  // PVP
+  const pctG = getExtra(id, 'pctGanancia');
+  document.getElementById('detallePctGanancia').value = pctG != null ? pctG : '';
+  const pvpSaved = getExtra(id, 'pvp');
+  document.getElementById('detallePVP').value = pvpSaved != null ? pvpSaved : '';
+  calcPVP();
   // proveedores list
   renderProvList(id);
+  // sales history inside detail modal
+  const sales = getSalesHistory(id);
+  const ventasDiv = document.getElementById('detalleVentas');
+  ventasDiv.innerHTML = '<h3>📊 Historial de Ventas</h3>' + renderSalesTable(sales, getNombre(id));
   document.getElementById('modalDetalle').classList.add('open');
 }
 
@@ -1398,9 +1482,102 @@ function guardarDetalle() {
   extras[id].lote = document.getElementById('detalleLote').value.trim();
   extras[id].fechFab = document.getElementById('detalleFechFab').value;
   extras[id].fechCad = document.getElementById('detalleFechCad').value;
+  const pctG = parseFloat(document.getElementById('detallePctGanancia').value);
+  extras[id].pctGanancia = (!isNaN(pctG) && pctG >= 0) ? pctG : null;
+  const pvpCalc = document.getElementById('detallePVP').value;
+  if (pvpCalc) extras[id].pvp = parseFloat(pvpCalc);
   closeDetalle();
   render(); updateStats(); saveData();
   toast('✅ Producto actualizado', 'ok');
+}
+
+// ── PVP CALCULATION ─────────────────────────────────────
+function calcPVP() {
+  const costo = parseFloat(document.getElementById('detalleCosto').value) || 0;
+  const pct = parseFloat(document.getElementById('detallePctGanancia').value) || 0;
+  const pvp = costo * (1 + pct / 100);
+  document.getElementById('detallePVP').value = pvp.toFixed(2);
+  const preview = document.getElementById('pvpPreview');
+  if (pct > 0 && costo > 0) {
+    const ganancia = pvp - costo;
+    preview.style.display = 'block';
+    preview.innerHTML = `💰 Costo: $${costo.toFixed(2)} + ${pct}% = <strong>PVP: $${pvp.toFixed(2)}</strong> (Ganancia: $${ganancia.toFixed(2)})`;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+// ── SALES HISTORY ───────────────────────────────────────
+function getSalesHistory(productId) {
+  try {
+    const raw = localStorage.getItem('bxd_fact_v1');
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    const facturas = data.facturas || [];
+    const sales = [];
+    facturas.forEach(f => {
+      if (f.estado === 'ANULADA') return;
+      (f.items || []).forEach(it => {
+        if (parseInt(it.id) === parseInt(productId)) {
+          sales.push({
+            fecha: f.fecha || f.createdAt || '',
+            doc: f.numero || '—',
+            tipo: f.tipo || 'nota',
+            cliente: f.cliente ? (f.cliente.nombre || f.cliente.razon || '—') : '—',
+            qty: it.qty || it.cantidad || 0,
+            precio: it.price || it.precio || 0,
+            subtotal: (it.qty || it.cantidad || 0) * (it.price || it.precio || 0)
+          });
+        }
+      });
+    });
+    sales.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    return sales;
+  } catch(e) { console.warn('Error reading sales:', e); return []; }
+}
+
+function renderSalesTable(sales, productName) {
+  if (sales.length === 0) {
+    return '<div class="sin-ventas">📭 No hay ventas registradas para este producto</div>';
+  }
+  let totalQty = 0, totalRev = 0;
+  let html = '<table><thead><tr><th>Fecha</th><th>Documento</th><th>Cliente</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>';
+  sales.forEach(s => {
+    totalQty += parseFloat(s.qty);
+    totalRev += s.subtotal;
+    const typeLabel = {nota:'NV',factura:'FA',cotizacion:'CT',nota_credito:'NC',nota_debito:'ND'}[s.tipo] || s.tipo;
+    html += `<tr>
+      <td>${s.fecha ? new Date(s.fecha).toLocaleDateString('es-EC') : '—'}</td>
+      <td><strong>${s.doc}</strong></td>
+      <td>${escH(s.cliente)}</td>
+      <td style="text-align:right">${s.qty}</td>
+      <td style="text-align:right">$${parseFloat(s.precio).toFixed(2)}</td>
+      <td style="text-align:right">$${s.subtotal.toFixed(2)}</td>
+    </tr>`;
+  });
+  html += `<tr class="total-row">
+    <td colspan="3">TOTAL (${sales.length} ventas)</td>
+    <td style="text-align:right">${totalQty}</td>
+    <td></td>
+    <td style="text-align:right">$${totalRev.toFixed(2)}</td>
+  </tr>`;
+  html += '</tbody></table>';
+  return html;
+}
+
+function verHistorialVentas(id) {
+  const nombre = getNombre(id);
+  const sales = getSalesHistory(id);
+  document.getElementById('histVentasTitle').textContent = '📊 Ventas: ' + nombre;
+  const qty = getQty(id);
+  let stockInfo = '';
+  if (qty !== null && parseFloat(qty) === 0) {
+    stockInfo = '<div style="background:#fecaca;color:#dc2626;padding:8px 12px;border-radius:8px;font-weight:700;margin-bottom:12px;text-align:center">⚠️ SIN STOCK — Último stock: 0 unidades</div>';
+  } else if (qty !== null) {
+    stockInfo = `<div style="background:#dcfce7;color:#166534;padding:8px 12px;border-radius:8px;font-weight:600;margin-bottom:12px;text-align:center">Stock actual: ${qty} unidades</div>`;
+  }
+  document.getElementById('histVentasBody').innerHTML = stockInfo + '<div class="ventas-hist">' + renderSalesTable(sales, nombre) + '</div>';
+  document.getElementById('modalHistVentas').classList.add('open');
 }
 
 // ── IMAGE HANDLING ───────────────────────────────────────
@@ -1506,14 +1683,18 @@ function doReset() {
 
 // ── EXPORT CSV ───────────────────────────────────────────
 function exportCSV() {
-  const rows = [['#','CATEGORÍA','PRODUCTO','COSTO','STOCK_MIN','CANTIDAD','TOTAL_COSTO','PRECIO_VENTA','TOTAL_VENTA','ESTADO','LOTE','F_FABRICACION','F_CADUCIDAD','PROVEEDOR']];
+  const rows = [['#','CATEGORÍA','PRODUCTO','COSTO','%GANANCIA','PVP','STOCK_MIN','CANTIDAD','TOTAL_COSTO','PRECIO_VENTA','TOTAL_VENTA','ESTADO','LOTE','F_FABRICACION','F_CADUCIDAD','PROVEEDOR']];
   getAllProds().forEach(p => {
     const qty = getQty(p.id);
     const costo = getCosto(p.id);
     const precio = getPrecio(p.id);
-    const estado = isExpired(p.id) ? 'VENCIDO' : isLowStock(p.id) ? 'BAJO STOCK' : qty !== null ? 'OK' : 'SIN CONTAR';
+    const pvp = getExtra(p.id,'pvp') || '';
+    const pctG = getExtra(p.id,'pctGanancia') || '';
+    const zeroStock = qty !== null && parseFloat(qty) === 0;
+    const estado = isExpired(p.id) ? 'VENCIDO' : zeroStock ? 'SIN STOCK' : isLowStock(p.id) ? 'BAJO STOCK' : qty !== null ? 'OK' : 'SIN CONTAR';
     rows.push([
       p.id, p.categoria, getNombre(p.id), costo.toFixed(4),
+      pctG, pvp ? parseFloat(pvp).toFixed(2) : '',
       getStockMin(p.id) || '',
       qty !== null ? qty : '',
       qty !== null ? (parseFloat(qty)*costo).toFixed(2) : '',

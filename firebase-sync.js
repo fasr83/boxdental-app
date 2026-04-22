@@ -29,7 +29,8 @@
     'bd_progress_v1':  'planner_progress',
     'bd_crm_v3':       'reconnection',
     'bxd_rpt_v1':      'reports',
-    'bxd_cxp_v1':      'accounts_payable'
+    'bxd_cxp_v1':      'accounts_payable',
+    'bxd_chat_v1':     'chat_messages'
   };
 
   var COLLECTION = 'app_data';

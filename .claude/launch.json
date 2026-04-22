@@ -4,8 +4,8 @@
     {
       "name": "boxdental",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["http-server", "/Users/elfercho/Desktop/ROBUR/boxdental-app", "-p", "8090", "-c-1"],
-      "port": 8090
+      "runtimeArgs": ["serve", "-l", "3000", "."],
+      "port": 3000
     }
   ]
 }

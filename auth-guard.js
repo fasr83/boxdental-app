@@ -24,8 +24,7 @@
 
     // Pages restricted to admin only
     const ADMIN_PAGES = [
-      'Planificador_BoxDental.html',
-      'BoxDental_Panel_Reconexion.html'
+      'Planificador_BoxDental.html'
     ];
 
     // Check if current page is admin-only

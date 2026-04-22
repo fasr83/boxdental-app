@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat BoxDental</title>
+<style>
+:root{--primary:#1E40AF;--bg:#f0f4f8;--card:#fff;--border:#e2e8f0;--muted:#64748b;--green:#059669;--red:#dc2626;--blue:#3b82f6}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+.chat-header{background:linear-gradient(135deg,#1E3A8A,#1E40AF);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.chat-header img{height:36px;border-radius:8px;background:#fff;padding:3px 8px}
+.chat-header h1{font-size:1.1rem;font-weight:700;flex:1}
+.chat-header .user-info{font-size:.8rem;opacity:.8;display:flex;align-items:center;gap:8px}
+.online-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block}
+.header-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:8px;font-size:.78rem;cursor:pointer;font-weight:600;transition:all .12s;text-decoration:none}
+.header-btn:hover{background:rgba(255,255,255,.25)}
+
+/* ONLINE USERS BAR */
+.online-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.online-user{display:flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;padding:3px 10px;border-radius:12px;font-weight:600;font-size:.72rem}
+.online-user .dot{width:6px;height:6px;border-radius:50%;background:#4ade80}
+.offline-user{background:#f1f5f9;color:#94a3b8}
+.offline-user .dot{background:#cbd5e1}
+
+/* MESSAGES AREA */
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
+.msg{max-width:75%;padding:10px 14px;border-radius:16px;position:relative;word-wrap:break-word;line-height:1.45}
+.msg-wrap{display:flex;flex-direction:column;margin-bottom:2px}
+.msg-wrap.mine{align-items:flex-end}
+.msg-wrap.other{align-items:flex-start}
+.msg-sender{font-size:.68rem;font-weight:700;color:var(--muted);margin-bottom:2px;padding:0 6px}
+.msg.mine{background:var(--primary);color:#fff;border-bottom-right-radius:4px}
+.msg.other{background:#fff;color:#1e293b;border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg-time{font-size:.62rem;opacity:.6;margin-top:4px;text-align:right}
+.msg-img{max-width:280px;max-height:300px;border-radius:10px;cursor:pointer;display:block;margin:4px 0}
+.msg-audio{margin:4px 0}
+.msg-audio audio{height:36px;border-radius:18px}
+.msg-date-sep{text-align:center;margin:16px 0 8px;font-size:.72rem;color:var(--muted);font-weight:600}
+.msg-date-sep span{background:#e2e8f0;padding:4px 14px;border-radius:12px}
+.msg-system{text-align:center;font-size:.75rem;color:var(--muted);font-style:italic;margin:8px 0}
+.typing-indicator{font-size:.75rem;color:var(--muted);padding:4px 20px;font-style:italic;min-height:24px}
+
+/* INPUT AREA */
+.input-area{background:#fff;border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:flex-end;gap:8px}
+.input-area textarea{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.9rem;resize:none;max-height:120px;min-height:44px;font-family:inherit;outline:none;transition:border-color .2s;line-height:1.4}
+.input-area textarea:focus{border-color:var(--blue)}
+.input-actions{display:flex;gap:4px;align-items:center}
+.act-btn{width:40px;height:40px;border-radius:50%;border:none;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.btn-img{background:#eff6ff;color:var(--blue)}
+.btn-img:hover{background:#dbeafe}
+.btn-audio{background:#fef3c7;color:#d97706}
+.btn-audio:hover{background:#fde68a}
+.btn-audio.recording{background:var(--red);color:#fff;animation:pulse-rec 1s infinite}
+@keyframes pulse-rec{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.btn-send{background:var(--primary);color:#fff}
+.btn-send:hover{background:#1e3a8a}
+.btn-send:disabled{background:#94a3b8;cursor:not-allowed}
+
+/* IMAGE PREVIEW */
+.img-preview-bar{background:#fff;border-top:1px solid var(--border);padding:8px 16px;display:none;align-items:center;gap:10px}
+.img-preview-bar img{height:60px;border-radius:8px;border:2px solid var(--blue)}
+.img-preview-bar .remove{background:var(--red);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem}
+
+/* IMAGE LIGHTBOX */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:none;align-items:center;justify-content:center;cursor:pointer}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:8px}
+.lightbox.open{display:flex}
+
+/* TOAST */
+.toast{position:fixed;top:16px;right:16px;background:#1e293b;color:#fff;padding:10px 18px;border-radius:10px;font-size:.85rem;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media(max-width:600px){
+  .msg{max-width:88%}
+  .chat-header{padding:10px 12px}
+  .messages{padding:12px}
+  .input-area{padding:8px 10px}
+  .online-bar{padding:6px 12px;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<div class="chat-header">
+  <img src="Logo de boxdental .png" alt="BoxDental">
+  <h1>Chat Interno</h1>
+  <div class="user-info">
+    <span class="online-dot"></span>
+    <span id="currentUser">—</span>
+  </div>
+  <a href="index.html" class="header-btn">Volver</a>
+</div>
+
+<div class="online-bar" id="onlineBar">
+  <span>En linea:</span>
+  <div id="onlineUsers"></div>
+</div>
+
+<div class="messages" id="messagesArea">
+  <div class="msg-system">Cargando mensajes...</div>
+</div>
+
+<div class="typing-indicator" id="typingIndicator"></div>
+
+<div class="img-preview-bar" id="imgPreviewBar">
+  <img id="imgPreviewThumb" src="" alt="">
+  <span style="flex:1;font-size:.82rem;color:var(--muted)">Imagen lista para enviar</span>
+  <button class="remove" onclick="clearImgPreview()">X</button>
+</div>
+
+<div class="input-area">
+  <textarea id="msgInput" placeholder="Escribe un mensaje..." rows="1" onkeydown="onInputKey(event)" oninput="autoResize(this);sendTyping()"></textarea>
+  <div class="input-actions">
+    <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="onImgSelected(event)">
+    <button class="act-btn btn-img" onclick="document.getElementById('imgFileInput').click()" title="Enviar imagen">📷</button>
+    <button class="act-btn btn-audio" id="btnAudio" onclick="toggleAudio()" title="Grabar audio">🎤</button>
+    <button class="act-btn btn-send" id="btnSend" onclick="sendMessage()" title="Enviar">➤</button>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="auth-guard.js"></script>
+<script>
+// ═══ FIREBASE CONFIG (same as firebase-sync.js) ═══
+const FB_CONFIG = {
+  apiKey: "AIzaSyDVa1FeTstjUq92oSsyjco6udhMUL1W4DY",
+  authDomain: "boxdentalec-6fca7.firebaseapp.com",
+  projectId: "boxdentalec-6fca7",
+  storageBucket: "boxdentalec-6fca7.firebasestorage.app",
+  messagingSenderId: "18161204785",
+  appId: "1:18161204785:web:b72fa4b80bf8f6955b1f10"
+};
+
+const USER_EMAILS = {
+  'admin':    'admin@boxdental.ec',
+  'fernando': 'fernando@boxdental.ec',
+  'ventas':   'ventas@boxdental.ec'
+};
+
+const SESSION_KEY = 'bxd_session_v1';
+let db = null;
+let currentUserName = '';
+let currentUserId = '';
+let pendingImgB64 = null;
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let unsubMessages = null;
+let unsubPresence = null;
+let typingTimeout = null;
+let lastTypingSent = 0;
+
+// ═══ INIT ═══
+function init() {
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+  if (!raw) { window.location.href = 'index.html'; return; }
+  const session = JSON.parse(raw);
+  currentUserName = session.name;
+  currentUserId = session.user;
+  document.getElementById('currentUser').textContent = currentUserName;
+
+  // Load Firebase SDK
+  loadScripts([
+    'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
+    'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js'
+  ], () => {
+    if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+    db = firebase.firestore();
+    signInAndStart(session);
+  });
+}
+
+function loadScripts(urls, cb) {
+  let loaded = 0;
+  urls.forEach(url => {
+    // Check if already loaded
+    if (document.querySelector('script[src="'+url+'"]')) { loaded++; if(loaded===urls.length) cb(); return; }
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => { loaded++; if (loaded === urls.length) cb(); };
+    document.head.appendChild(s);
+  });
+}
+
+function signInAndStart(session) {
+  const email = USER_EMAILS[session.user] || session.user + '@boxdental.ec';
+  const pass = session.fbPass || session.pass || 'boxdental2026';
+  firebase.auth().signInWithEmailAndPassword(email, pass)
+    .then(() => startChat())
+    .catch(err => {
+      // Try creating user if not exists
+      firebase.auth().createUserWithEmailAndPassword(email, pass)
+        .then(() => startChat())
+        .catch(e => {
+          console.warn('Auth error:', e.message);
+          // Still start chat with local-only mode
+          startChat();
+        });
+    });
+}
+
+// ═══ CHAT CORE ═══
+function startChat() {
+  listenMessages();
+  setPresence(true);
+  listenPresence();
+  listenTyping();
+
+  // Set presence offline on close
+  window.addEventListener('beforeunload', () => setPresence(false));
+  // Focus input
+  document.getElementById('msgInput').focus();
+}
+
+function listenMessages() {
+  if (!db) return;
+  const ref = db.collection('app_data').doc('chat_messages').collection('msgs').orderBy('ts', 'asc').limitToLast(200);
+  unsubMessages = ref.onSnapshot(snap => {
+    renderMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, err => {
+    console.warn('Messages listener error:', err);
+  });
+}
+
+function renderMessages(msgs) {
+  const area = document.getElementById('messagesArea');
+  if (msgs.length === 0) {
+    area.innerHTML = '<div class="msg-system">No hay mensajes aun. Escribe el primero!</div>';
+    return;
+  }
+
+  let html = '';
+  let lastDate = '';
+  msgs.forEach(m => {
+    // Date separator
+    const msgDate = m.ts ? new Date(m.ts.seconds ? m.ts.seconds * 1000 : m.ts).toLocaleDateString('es-EC', {weekday:'long', day:'numeric', month:'long'}) : '';
+    if (msgDate && msgDate !== lastDate) {
+      html += '<div class="msg-date-sep"><span>' + msgDate + '</span></div>';
+      lastDate = msgDate;
+    }
+
+    const isMine = m.userId === currentUserId;
+    const time = m.ts ? new Date(m.ts.seconds ? m.ts.seconds * 1000 : m.ts).toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'}) : '';
+
+    html += '<div class="msg-wrap ' + (isMine ? 'mine' : 'other') + '">';
+    if (!isMine) html += '<div class="msg-sender">' + escH(m.userName || 'Usuario') + '</div>';
+    html += '<div class="msg ' + (isMine ? 'mine' : 'other') + '">';
+
+    // Content
+    if (m.type === 'image' && m.imageData) {
+      html += '<img class="msg-img" src="' + m.imageData + '" alt="Imagen" onclick="openLightbox(this.src)">';
+      if (m.text) html += '<div style="margin-top:6px">' + escH(m.text) + '</div>';
+    } else if (m.type === 'audio' && m.audioData) {
+      html += '<div class="msg-audio"><audio controls src="' + m.audioData + '"></audio></div>';
+      if (m.text) html += '<div style="margin-top:4px">' + escH(m.text) + '</div>';
+    } else {
+      html += formatText(m.text || '');
+    }
+
+    html += '<div class="msg-time">' + time + '</div>';
+    html += '</div></div>';
+  });
+
+  area.innerHTML = html;
+  // Scroll to bottom
+  area.scrollTop = area.scrollHeight;
+}
+
+function formatText(text) {
+  // Simple formatting: URLs clickable, newlines to <br>
+  return escH(text)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:inherit;text-decoration:underline">$1</a>')
+    .replace(/\n/g, '<br>');
+}
+
+function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+
+  if (!text && !pendingImgB64) return;
+  if (!db) { showToast('Sin conexion a Firebase'); return; }
+
+  const msg = {
+    text: text,
+    userId: currentUserId,
+    userName: currentUserName,
+    ts: firebase.firestore.FieldValue.serverTimestamp(),
+    type: 'text'
+  };
+
+  if (pendingImgB64) {
+    msg.type = 'image';
+    msg.imageData = pendingImgB64;
+    clearImgPreview();
+  }
+
+  db.collection('app_data').doc('chat_messages').collection('msgs').add(msg)
+    .then(() => {
+      input.value = '';
+      autoResize(input);
+      clearTyping();
+    })
+    .catch(err => {
+      showToast('Error al enviar: ' + err.message);
+    });
+}
+
+// ═══ IMAGE HANDLING ═══
+function onImgSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 800000) {
+    // Compress large images
+    compressImage(file, 800, 0.7, b64 => {
+      pendingImgB64 = b64;
+      showImgPreview(b64);
+    });
+  } else {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingImgB64 = ev.target.result;
+      showImgPreview(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+  e.target.value = '';
+}
+
+function compressImage(file, maxDim, quality, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function showImgPreview(b64) {
+  document.getElementById('imgPreviewThumb').src = b64;
+  document.getElementById('imgPreviewBar').style.display = 'flex';
+  document.getElementById('msgInput').focus();
+}
+
+function clearImgPreview() {
+  pendingImgB64 = null;
+  document.getElementById('imgPreviewBar').style.display = 'none';
+  document.getElementById('imgPreviewThumb').src = '';
+}
+
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+// ═══ AUDIO RECORDING ═══
+function toggleAudio() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Tu navegador no soporta grabacion de audio');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      isRecording = true;
+      audioChunks = [];
+      const btn = document.getElementById('btnAudio');
+      btn.classList.add('recording');
+      btn.textContent = '⏹';
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = ev => {
+          sendAudioMessage(ev.target.result);
+        };
+        reader.readAsDataURL(blob);
+        isRecording = false;
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+      };
+      mediaRecorder.start();
+      showToast('Grabando audio... pulsa de nuevo para parar');
+    })
+    .catch(err => {
+      showToast('Error al acceder al microfono: ' + err.message);
+    });
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+}
+
+function sendAudioMessage(audioB64) {
+  if (!db) return;
+  const msg = {
+    text: '',
+    userId: currentUserId,
+    userName: currentUserName,
+    ts: firebase.firestore.FieldValue.serverTimestamp(),
+    type: 'audio',
+    audioData: audioB64
+  };
+  db.collection('app_data').doc('chat_messages').collection('msgs').add(msg)
+    .catch(err => showToast('Error al enviar audio: ' + err.message));
+}
+
+// ═══ PRESENCE ═══
+function setPresence(online) {
+  if (!db) return;
+  db.collection('app_data').doc('chat_meta').collection('presence').doc(currentUserId).set({
+    userName: currentUserName,
+    online: online,
+    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(() => {});
+}
+
+function listenPresence() {
+  if (!db) return;
+  unsubPresence = db.collection('app_data').doc('chat_meta').collection('presence').onSnapshot(snap => {
+    const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOnlineUsers(users);
+  });
+}
+
+function renderOnlineUsers(users) {
+  const div = document.getElementById('onlineUsers');
+  div.innerHTML = users.map(u => {
+    const isOnline = u.online;
+    const cls = isOnline ? 'online-user' : 'online-user offline-user';
+    return '<span class="' + cls + '"><span class="dot"></span>' + escH(u.userName) + '</span>';
+  }).join('');
+}
+
+// ═══ TYPING INDICATOR ═══
+function sendTyping() {
+  if (!db) return;
+  const now = Date.now();
+  if (now - lastTypingSent < 2000) return;
+  lastTypingSent = now;
+  db.collection('app_data').doc('chat_meta').collection('typing').doc(currentUserId).set({
+    userName: currentUserName,
+    ts: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(() => {});
+}
+
+function clearTyping() {
+  if (!db) return;
+  db.collection('app_data').doc('chat_meta').collection('typing').doc(currentUserId).delete().catch(() => {});
+}
+
+function listenTyping() {
+  if (!db) return;
+  db.collection('app_data').doc('chat_meta').collection('typing').onSnapshot(snap => {
+    const typers = snap.docs
+      .filter(d => d.id !== currentUserId)
+      .map(d => d.data().userName);
+    const el = document.getElementById('typingIndicator');
+    if (typers.length > 0) {
+      el.textContent = typers.join(', ') + (typers.length === 1 ? ' esta escribiendo...' : ' estan escribiendo...');
+    } else {
+      el.textContent = '';
+    }
+  });
+}
+
+// ═══ HELPERS ═══
+function onInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function escH(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ═══ HEARTBEAT (keep presence alive) ═══
+setInterval(() => {
+  if (db && currentUserId) setPresence(true);
+}, 60000);
+
+// ═══ START ═══
+init();
+</script>
+</body>
+</html>

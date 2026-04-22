@@ -1,6 +1,5 @@
+headersOrigin = "config"
 plugins = []
-headers = []
-redirects = []
 
 [functions]
 
@@ -8,18 +7,86 @@ redirects = []
 
 [build]
 publish = "/Users/elfercho/Desktop/ROBUR/boxdental-app"
-publishOrigin = "default"
+publishOrigin = "config"
 
 [build.environment]
 
 [build.processing]
+skip_processing = true
 
 [build.processing.css]
 
 [build.processing.html]
+pretty_urls = false
 
 [build.processing.images]
 
 [build.processing.js]
 
 [build.services]
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[redirects]]
+from = "/facturacion_boxdental"
+to = "/Facturacion_BoxDental.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/conteo_inventario_boxdental"
+to = "/Conteo_Inventario_BoxDental.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/planificador_boxdental"
+to = "/Planificador_BoxDental.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/chat_boxdental"
+to = "/Chat_BoxDental.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/cuentasporpagar_boxdental"
+to = "/CuentasPorPagar_BoxDental.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
