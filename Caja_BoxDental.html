@@ -158,7 +158,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="stat-box"><div class="stat-val blue" id="statTransf">$0.00</div><div class="stat-lbl">🏦 Transferencias</div></div>
       <div class="stat-box"><div class="stat-val yellow" id="statTarjeta">$0.00</div><div class="stat-lbl">💳 Tarjetas</div></div>
       <div class="stat-box"><div class="stat-val" id="statCheque">$0.00</div><div class="stat-lbl">📄 Cheques</div></div>
-      <div class="stat-box"><div class="stat-val blue" id="statTotal">$0.00</div><div class="stat-lbl">📊 Total del Día</div></div>
+      <div class="stat-box"><div class="stat-val red" id="statCredito">$0.00</div><div class="stat-lbl">📋 Créditos</div></div>
+      <div class="stat-box"><div class="stat-val blue" id="statTotal">$0.00</div><div class="stat-lbl">📊 Total Cobrado</div></div>
     </div>
 
     <!-- MOVIMIENTOS DEL DÍA -->
@@ -408,13 +409,14 @@ function renderResumenStats() {
   const ventasHoy = facturas.filter(f => f.fecha === cajaHoy.fecha && f.estado === 'EMITIDA' && f.tipoDoc !== 'nota_credito' && f.tipoDoc !== 'nota_debito');
   const movManual = cajaHoy.movimientos || [];
 
-  let ef=0, tf=0, tj=0, ch=0;
+  let ef=0, tf=0, tj=0, ch=0, cr=0;
   ventasHoy.forEach(f => {
     const m = f.pago?.metodo || '';
     if (m==='efectivo') ef += f.total;
     else if (m==='transferencia') tf += f.total;
     else if (m==='tarjeta') tj += f.total;
     else if (m==='cheque') ch += f.total;
+    else if (m==='credito') cr += f.total;
   });
   movManual.forEach(m => {
     const sign = m.tipo==='ingreso' ? 1 : -1;
@@ -428,6 +430,7 @@ function renderResumenStats() {
   document.getElementById('statTransf').textContent = fmtCur(tf);
   document.getElementById('statTarjeta').textContent = fmtCur(tj);
   document.getElementById('statCheque').textContent = fmtCur(ch);
+  const crEl = document.getElementById('statCredito'); if(crEl) crEl.textContent = fmtCur(cr);
   document.getElementById('statTotal').textContent = fmtCur(ef+tf+tj+ch);
 }
 
