@@ -118,26 +118,41 @@
 
   // ── Auto-login desde sesión guardada ─────────────────────
   function tryAutoLogin() {
-    if (authRetryCount > 3) return;
+    if (!auth || currentUser) return;
+    if (authRetryCount > 3) {
+      // Fallback: autenticación anónima para garantizar sync en cualquier dispositivo
+      signInAnonymously();
+      return;
+    }
     authRetryCount++;
     var session = sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1');
-    if (!session || !auth) return;
+    if (!session) { signInAnonymously(); return; }
     try {
       var s = JSON.parse(session);
       var email = USER_EMAILS[s.user];
       var pass  = s.fbPass;
-      if (email && pass && !currentUser) {
+      if (email && pass) {
         auth.signInWithEmailAndPassword(email, pass)
           .catch(function(err) {
-            // Si el usuario no existe en Firebase Auth, crearlo
             if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
               return auth.createUserWithEmailAndPassword(email, pass)
                 .then(function(c) { return c.user.updateProfile({ displayName: s.user }); })
-                .catch(function() {});
+                .catch(function() { signInAnonymously(); });
+            } else {
+              signInAnonymously();
             }
           });
+      } else {
+        signInAnonymously();
       }
-    } catch(e) {}
+    } catch(e) { signInAnonymously(); }
+  }
+
+  function signInAnonymously() {
+    if (!auth || currentUser) return;
+    auth.signInAnonymously().catch(function(e) {
+      console.warn('[BXD_FB] Anon auth failed:', e.message);
+    });
   }
 
   // ── Listener en tiempo real (onSnapshot) ─────────────────
