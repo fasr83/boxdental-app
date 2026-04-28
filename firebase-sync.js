@@ -26,7 +26,8 @@
     'bd_tasks_v3':     'planner_tasks',
     'bd_progress_v1':  'planner_progress',
     'bxd_cxp_v1':      'accounts_payable',
-    'bxd_chat_v1':     'chat_messages'
+    'bxd_chat_v1':     'chat_messages',
+    'bxd_caja_v1':     'caja'
   };
 
   var COLLECTION = 'app_data';

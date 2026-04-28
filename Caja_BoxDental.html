@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caja — BoxDental Ecuador</title>
+<script src="auth-guard.js"></script>
+<script src="firebase-sync.js?v=3"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--pri:#1E40AF;--sec:#3B82F6;--green:#059669;--red:#DC2626;--yellow:#D97706;--bg:#F0F4F8;--white:#fff;--border:#E2E8F0;--muted:#64748B;--text:#1E293B}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* NAV */
+.topnav{background:linear-gradient(135deg,#1e3a8a,#1E40AF);color:#fff;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.3);height:52px;gap:16px}
+.brand{font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:10px}
+.brand img{height:36px;border-radius:6px;background:#fff;padding:2px 6px}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.nav-back{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:none}
+.nav-back:hover{background:rgba(255,255,255,.25)}
+#fbSyncStatus{font-size:11px;font-weight:600;color:#86efac}
+
+/* LAYOUT */
+.page{max-width:1100px;margin:0 auto;padding:20px}
+.page-title{font-size:1.5rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+
+/* CARDS */
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px;overflow:hidden}
+.card-hdr{padding:14px 18px;font-weight:700;font-size:.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.card-body{padding:18px}
+
+/* STATUS BAR */
+.status-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.stat-box{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);text-align:center}
+.stat-val{font-size:1.8rem;font-weight:800}
+.stat-lbl{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}
+.stat-val.green{color:var(--green)}.stat-val.red{color:var(--red)}.stat-val.blue{color:var(--pri)}.stat-val.yellow{color:var(--yellow)}
+
+/* CAJA CERRADA */
+.caja-cerrada{text-align:center;padding:40px;color:var(--muted)}
+.caja-cerrada .icon{font-size:4rem;margin-bottom:16px}
+.caja-cerrada h2{font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:8px}
+
+/* FORMULARIOS */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.form-field input,.form-field select,.form-field textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff}
+.form-field input:focus,.form-field select:focus{border-color:var(--sec);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.form-field input[readonly]{background:#f8fafc;color:var(--muted)}
+
+/* DENOMINACIONES */
+.denom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
+.denom-item{display:flex;flex-direction:column;gap:4px;background:#f8fafc;border-radius:8px;padding:10px}
+.denom-lbl{font-size:.75rem;font-weight:700;color:var(--muted)}
+.denom-row{display:flex;align-items:center;gap:6px}
+.denom-row input{flex:1;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-weight:700;outline:none}
+.denom-row input:focus{border-color:var(--sec)}
+.denom-subtotal{font-size:.78rem;font-weight:700;color:var(--pri);margin-top:2px}
+
+/* MOVIMIENTOS */
+.mov-table{width:100%;border-collapse:collapse;font-size:13px}
+.mov-table th{text-align:left;padding:10px 12px;background:#f8fafc;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border)}
+.mov-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mov-table tr:hover td{background:#fafbfc}
+.mov-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.7rem;font-weight:700}
+.badge-in{background:#dcfce7;color:#166534}
+.badge-out{background:#fee2e2;color:#991b1b}
+.badge-ef{background:#dbeafe;color:#1e40af}
+.badge-tf{background:#ede9fe;color:#6d28d9}
+.badge-tj{background:#fef3c7;color:#92400e}
+.badge-ch{background:#f1f5f9;color:#475569}
+.badge-cr{background:#fce7f3;color:#9d174d}
+
+/* RESUMEN CIERRE */
+.resumen-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.resumen-item{background:#f8fafc;border-radius:8px;padding:12px;text-align:center}
+.resumen-val{font-size:1.3rem;font-weight:800;color:var(--pri)}
+.resumen-lbl{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase}
+
+/* BOTONES */
+.btn{padding:9px 18px;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.btn-pri{background:var(--pri);color:#fff}
+.btn-success{background:var(--green);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-warning{background:var(--yellow);color:#fff}
+.btn-ghost{background:#f1f5f9;color:var(--text)}
+.btn-lg{padding:12px 24px;font-size:1rem}
+
+/* CREDITOS PENDIENTES */
+.credito-item{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.credito-item:last-child{border-bottom:none}
+.credito-venc{font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:12px}
+.venc-ok{background:#dcfce7;color:#166534}
+.venc-prox{background:#fef3c7;color:#92400e}
+.venc-vencido{background:#fee2e2;color:#991b1b}
+
+/* TOAST */
+.toast-c{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1E293B;color:#fff;padding:12px 18px;border-radius:10px;font-size:.88rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:slideIn .2s ease;max-width:320px}
+.toast.ok{background:#065f46}.toast.err{background:#991b1b}.toast.warn{background:#92400e}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.modal-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-hdr h3{font-size:1.1rem;font-weight:800}
+.modal-body{padding:22px}
+.modal-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.close-btn{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);line-height:1}
+.close-btn:hover{color:var(--red)}
+
+@media(max-width:600px){
+  .denom-grid{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+  .status-bar{gap:8px}
+  .stat-box{min-width:100px;padding:12px}
+  .stat-val{font-size:1.4rem}
+  .page{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="brand"><img src="Logo de boxdental .png" alt="BoxDental"> 🏦 Caja del Día</div>
+  <div class="nav-right">
+    <span id="fbSyncStatus"></span>
+    <a href="index.html" class="nav-back">← Inicio</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div id="cajaCerradaView">
+    <div class="caja-cerrada">
+      <div class="icon">🔒</div>
+      <h2>Caja Cerrada</h2>
+      <p>Para registrar movimientos del día, primero abre la caja.</p>
+      <br>
+      <button class="btn btn-success btn-lg" onclick="showApertura()">📂 Abrir Caja del Día</button>
+    </div>
+
+    <!-- Créditos Pendientes siempre visibles -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-hdr">⏰ Créditos Pendientes de Cobro <span id="creditosBadge"></span></div>
+      <div id="creditosLista"><div style="padding:20px;text-align:center;color:var(--muted)">Sin créditos pendientes ✅</div></div>
+    </div>
+  </div>
+
+  <div id="cajaAbiertaView" style="display:none">
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+      <div class="stat-box"><div class="stat-val green" id="statEfectivo">$0.00</div><div class="stat-lbl">💵 Efectivo</div></div>
+      <div class="stat-box"><div class="stat-val blue" id="statTransf">$0.00</div><div class="stat-lbl">🏦 Transferencias</div></div>
+      <div class="stat-box"><div class="stat-val yellow" id="statTarjeta">$0.00</div><div class="stat-lbl">💳 Tarjetas</div></div>
+      <div class="stat-box"><div class="stat-val" id="statCheque">$0.00</div><div class="stat-lbl">📄 Cheques</div></div>
+      <div class="stat-box"><div class="stat-val blue" id="statTotal">$0.00</div><div class="stat-lbl">📊 Total del Día</div></div>
+    </div>
+
+    <!-- MOVIMIENTOS DEL DÍA -->
+    <div class="card">
+      <div class="card-hdr">
+        📋 Movimientos del Día — <span id="fechaCajaLabel"></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" style="font-size:.78rem" onclick="openMovModal()">+ Registrar movimiento</button>
+          <button class="btn btn-danger" onclick="confirmarCierre()">🔒 Cerrar Caja</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="mov-table">
+          <thead><tr>
+            <th>Hora</th><th>Tipo</th><th>Descripción</th><th>Método</th><th>Monto</th>
+          </tr></thead>
+          <tbody id="movTablaBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CRÉDITOS PENDIENTES -->
+    <div class="card">
+      <div class="card-hdr">⏰ Créditos Pendientes de Cobro</div>
+      <div id="creditosListaAbierta"><div style="padding:20px;text-align:center;color:var(--muted)">Sin créditos pendientes ✅</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL APERTURA -->
+<div class="modal-overlay" id="modalApertura">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>📂 Apertura de Caja</h3>
+      <button class="close-btn" onclick="closeModal('modalApertura')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-field">
+          <label>Fecha</label>
+          <input type="date" id="aperFecha">
+        </div>
+        <div class="form-field">
+          <label>Responsable</label>
+          <input type="text" id="aperResponsable" placeholder="Nombre del cajero">
+        </div>
+        <div class="form-field">
+          <label>Base en Caja (calculado automático)</label>
+          <input type="text" id="aperBaseTotal" readonly style="font-weight:800;font-size:1.1rem;color:var(--pri)">
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:.85rem;color:var(--muted);text-transform:uppercase;margin-bottom:8px">💵 Billetes</div>
+      <div class="denom-grid" id="billetesGrid"></div>
+
+      <div style="font-weight:700;font-size:.85rem;color:var(--muted);text-transform:uppercase;margin:16px 0 8px">🪙 Monedas</div>
+      <div class="denom-grid" id="monedasGrid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalApertura')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarApertura()">✅ Abrir Caja</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVIMIENTO MANUAL -->
+<div class="modal-overlay" id="modalMovimiento">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>+ Registrar Movimiento</h3>
+      <button class="close-btn" onclick="closeModal('modalMovimiento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Tipo</label>
+          <select id="movTipo">
+            <option value="ingreso">Ingreso (entrada de dinero)</option>
+            <option value="egreso">Egreso (salida de dinero)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Método de pago</label>
+          <select id="movMetodo">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="transferencia">🏦 Transferencia</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="cheque">📄 Cheque</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Banco (si aplica)</label>
+          <select id="movBanco">
+            <option value="">— Seleccionar —</option>
+            <option value="Banco del BIESS">Banco del BIESS</option>
+            <option value="Banco Pichincha">Banco Pichincha</option>
+            <option value="Banco Guayaquil">Banco Guayaquil</option>
+            <option value="Produbanco">Produbanco</option>
+            <option value="Banco Internacional">Banco Internacional</option>
+            <option value="Banco Pacífico">Banco Pacífico</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Monto ($)</label>
+          <input type="number" id="movMonto" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <div class="form-field" style="grid-column:1/-1">
+          <label>Descripción / Referencia</label>
+          <input type="text" id="movDesc" placeholder="Ej: Pago de arriendo, Compra de materiales...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalMovimiento')">Cancelar</button>
+      <button class="btn btn-pri" onclick="guardarMovimiento()">✅ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CIERRE -->
+<div class="modal-overlay" id="modalCierre">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>🔒 Cierre de Caja</h3>
+      <button class="close-btn" onclick="closeModal('modalCierre')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted);margin-bottom:16px;font-size:.88rem">Resumen del día antes de cerrar:</p>
+      <div class="resumen-grid" id="resumenCierre"></div>
+      <div style="margin-top:16px;padding:14px;background:#fef3c7;border-radius:8px;font-size:.85rem">
+        <strong>⚠️ Al cerrar la caja no podrás agregar más movimientos del día.</strong>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalCierre')">Cancelar</button>
+      <button class="btn btn-danger" onclick="ejecutarCierre()">🔒 Confirmar Cierre</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-c" id="toastC"></div>
+
+<script>
+const SK_CAJA   = 'bxd_caja_v1';
+const SK_FACT   = 'bxd_fact_v1';
+
+// Denominaciones
+const BILLETES = [{v:100,l:'$100'},{v:50,l:'$50'},{v:20,l:'$20'},{v:10,l:'$10'},{v:5,l:'$5'},{v:1,l:'$1'}];
+const MONEDAS  = [{v:1,l:'$1.00'},{v:0.5,l:'$0.50'},{v:0.25,l:'$0.25'},{v:0.10,l:'$0.10'},{v:0.05,l:'$0.05'},{v:0.01,l:'$0.01'}];
+
+let cajas = [];       // historial de días
+let cajaHoy = null;   // caja del día actual (null = cerrada)
+let facturas = [];    // from facturación
+
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtCur(v) { return '$'+parseFloat(v||0).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;const c=document.getElementById('toastC');c.appendChild(t);setTimeout(()=>t.remove(),4000);}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── LOAD DATA ───────────────────────────────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem(SK_CAJA);
+    if (raw) {
+      const d = JSON.parse(raw);
+      cajas = Array.isArray(d) ? d : (d.cajas || []);
+    }
+  } catch(e) { cajas = []; }
+
+  try {
+    const raw = localStorage.getItem(SK_FACT);
+    if (raw) {
+      const d = JSON.parse(raw);
+      facturas = d.facturas || [];
+    }
+  } catch(e) { facturas = []; }
+
+  // Verificar si hay caja abierta hoy
+  cajaHoy = cajas.find(c => c.fecha === today() && c.estado === 'abierta') || null;
+}
+
+function saveData() {
+  const data = { cajas, savedAt: new Date().toISOString() };
+  localStorage.setItem(SK_CAJA, JSON.stringify(data));
+  if (window.BXD_FB) BXD_FB.save(SK_CAJA, data);
+}
+
+// ── RENDER ──────────────────────────────────────────────
+function render() {
+  if (cajaHoy) {
+    document.getElementById('cajaCerradaView').style.display = 'none';
+    document.getElementById('cajaAbiertaView').style.display = 'block';
+    renderMovimientos();
+    renderResumenStats();
+  } else {
+    document.getElementById('cajaCerradaView').style.display = 'block';
+    document.getElementById('cajaAbiertaView').style.display = 'none';
+  }
+  renderCreditos('creditosLista');
+  renderCreditos('creditosListaAbierta');
+}
+
+function renderMovimientos() {
+  if (!cajaHoy) return;
+  const tbody = document.getElementById('movTablaBody');
+  document.getElementById('fechaCajaLabel').textContent = new Date(cajaHoy.fecha+'T12:00:00').toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  // Combinar movimientos manuales + ventas del día
+  const todosMovs = [...(cajaHoy.movimientos || [])];
+
+  // Añadir ventas emitidas hoy desde facturación
+  const ventasHoy = facturas.filter(f => f.fecha === cajaHoy.fecha && f.estado === 'EMITIDA' && f.tipoDoc !== 'nota_credito' && f.tipoDoc !== 'nota_debito');
+  ventasHoy.forEach(f => {
+    const hora = f.emitidaAt ? new Date(f.emitidaAt).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+    todosMovs.push({
+      hora,
+      tipo: 'ingreso',
+      desc: (f.tipoDocLabel||'Nota de Venta') + ' ' + (f.tipoDocPrefix||'NV') + '-' + String(f.numero).padStart(4,'0') + ' — ' + (f.cliente?.nombre||''),
+      metodo: f.pago?.metodo || 'no_especificado',
+      monto: f.total || 0,
+      fromVenta: true
+    });
+  });
+
+  if (todosMovs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Sin movimientos registrados aún</td></tr>';
+    return;
+  }
+
+  const metodoBadge = { efectivo:'badge-ef', transferencia:'badge-tf', tarjeta:'badge-tj', cheque:'badge-ch', credito:'badge-cr', no_especificado:'badge-ch' };
+  const metodoLabel = { efectivo:'💵 Efectivo', transferencia:'🏦 Transferencia', tarjeta:'💳 Tarjeta', cheque:'📄 Cheque', credito:'📋 Crédito', no_especificado:'—' };
+
+  tbody.innerHTML = todosMovs.map(m => `
+    <tr>
+      <td style="font-size:12px;color:var(--muted)">${m.hora||'--:--'}</td>
+      <td><span class="badge ${m.tipo==='ingreso'?'badge-in':'badge-out'}">${m.tipo==='ingreso'?'↑ Ingreso':'↓ Egreso'}</span></td>
+      <td style="max-width:280px">${m.desc||''}</td>
+      <td><span class="badge ${metodoBadge[m.metodo]||'badge-ch'}">${metodoLabel[m.metodo]||m.metodo}</span></td>
+      <td style="text-align:right;font-weight:700;color:${m.tipo==='ingreso'?'var(--green)':'var(--red)'}">${m.tipo==='ingreso'?'+':'−'}${fmtCur(m.monto)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderResumenStats() {
+  if (!cajaHoy) return;
+  const ventasHoy = facturas.filter(f => f.fecha === cajaHoy.fecha && f.estado === 'EMITIDA' && f.tipoDoc !== 'nota_credito' && f.tipoDoc !== 'nota_debito');
+  const movManual = cajaHoy.movimientos || [];
+
+  let ef=0, tf=0, tj=0, ch=0;
+  ventasHoy.forEach(f => {
+    const m = f.pago?.metodo || '';
+    if (m==='efectivo') ef += f.total;
+    else if (m==='transferencia') tf += f.total;
+    else if (m==='tarjeta') tj += f.total;
+    else if (m==='cheque') ch += f.total;
+  });
+  movManual.forEach(m => {
+    const sign = m.tipo==='ingreso' ? 1 : -1;
+    if (m.metodo==='efectivo') ef += sign * m.monto;
+    else if (m.metodo==='transferencia') tf += sign * m.monto;
+    else if (m.metodo==='tarjeta') tj += sign * m.monto;
+    else if (m.metodo==='cheque') ch += sign * m.monto;
+  });
+
+  document.getElementById('statEfectivo').textContent = fmtCur(ef);
+  document.getElementById('statTransf').textContent = fmtCur(tf);
+  document.getElementById('statTarjeta').textContent = fmtCur(tj);
+  document.getElementById('statCheque').textContent = fmtCur(ch);
+  document.getElementById('statTotal').textContent = fmtCur(ef+tf+tj+ch);
+}
+
+function renderCreditos(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const creditos = facturas.filter(f => f.pago?.metodo === 'credito' && f.estado === 'EMITIDA');
+  if (creditos.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">Sin créditos pendientes ✅</div>';
+    const badge = document.getElementById('creditosBadge');
+    if (badge) badge.textContent = '';
+    return;
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+
+  const badge = document.getElementById('creditosBadge');
+  if (badge) badge.textContent = creditos.length + ' pendiente(s)';
+
+  container.innerHTML = creditos.map(f => {
+    const venc = f.pago?.vencimiento ? new Date(f.pago.vencimiento+'T12:00:00') : null;
+    let vencClass = 'venc-ok', vencLabel = 'Sin fecha';
+    if (venc) {
+      const diff = Math.ceil((venc - hoy) / 86400000);
+      if (diff < 0) { vencClass='venc-vencido'; vencLabel='⚠️ VENCIDO ('+Math.abs(diff)+'d)'; }
+      else if (diff <= 5) { vencClass='venc-prox'; vencLabel='⏰ Vence en '+diff+'d'; }
+      else { vencLabel='📅 '+venc.toLocaleDateString('es-EC',{day:'2-digit',month:'short'}); }
+    }
+    return `<div class="credito-item">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.88rem">${f.cliente?.nombre||'Sin nombre'}</div>
+        <div style="font-size:.75rem;color:var(--muted)">${f.tipoDocPrefix||'NV'}-${String(f.numero).padStart(4,'0')} · ${f.pago?.plazo||30} días · Tel: ${f.cliente?.telefono||'—'}</div>
+      </div>
+      <span class="credito-venc ${vencClass}">${vencLabel}</span>
+      <strong style="color:var(--pri)">${fmtCur(f.total)}</strong>
+    </div>`;
+  }).join('');
+}
+
+// ── APERTURA ────────────────────────────────────────────
+function showApertura() {
+  document.getElementById('aperFecha').value = today();
+  document.getElementById('aperResponsable').value = '';
+  document.getElementById('aperBaseTotal').value = '$0.00';
+  buildDenomGrids();
+  document.getElementById('modalApertura').classList.add('open');
+}
+
+function buildDenomGrids() {
+  const bill = document.getElementById('billetesGrid');
+  const mon  = document.getElementById('monedasGrid');
+
+  bill.innerHTML = BILLETES.map(d =>
+    `<div class="denom-item">
+      <div class="denom-lbl">${d.l}</div>
+      <div class="denom-row"><span style="font-size:.7rem;color:var(--muted)">×</span><input type="number" min="0" value="0" id="bill_${d.v.toString().replace('.','_')}" oninput="calcBase()"> </div>
+      <div class="denom-subtotal" id="sub_bill_${d.v.toString().replace('.','_')}">$0.00</div>
+    </div>`
+  ).join('');
+
+  mon.innerHTML = MONEDAS.map(d =>
+    `<div class="denom-item">
+      <div class="denom-lbl">${d.l}</div>
+      <div class="denom-row"><span style="font-size:.7rem;color:var(--muted)">×</span><input type="number" min="0" value="0" id="mon_${d.v.toString().replace('.','_')}" oninput="calcBase()"></div>
+      <div class="denom-subtotal" id="sub_mon_${d.v.toString().replace('.','_')}">$0.00</div>
+    </div>`
+  ).join('');
+}
+
+function calcBase() {
+  let total = 0;
+  BILLETES.forEach(d => {
+    const id = 'bill_'+d.v.toString().replace('.','_');
+    const qty = parseInt(document.getElementById(id).value)||0;
+    const sub = qty * d.v;
+    total += sub;
+    document.getElementById('sub_'+id).textContent = fmtCur(sub);
+  });
+  MONEDAS.forEach(d => {
+    const id = 'mon_'+d.v.toString().replace('.','_');
+    const qty = parseInt(document.getElementById(id).value)||0;
+    const sub = Math.round(qty * d.v * 100) / 100;
+    total += sub;
+    document.getElementById('sub_'+id).textContent = fmtCur(sub);
+  });
+  document.getElementById('aperBaseTotal').value = fmtCur(total);
+  return Math.round(total * 100) / 100;
+}
+
+function getDenomData() {
+  const data = { billetes:{}, monedas:{} };
+  BILLETES.forEach(d => {
+    const id = 'bill_'+d.v.toString().replace('.','_');
+    data.billetes[d.v] = parseInt(document.getElementById(id).value)||0;
+  });
+  MONEDAS.forEach(d => {
+    const id = 'mon_'+d.v.toString().replace('.','_');
+    data.monedas[d.v] = parseInt(document.getElementById(id).value)||0;
+  });
+  return data;
+}
+
+function confirmarApertura() {
+  const fecha = document.getElementById('aperFecha').value;
+  if (!fecha) { toast('Ingresa la fecha','err'); return; }
+  const resp = document.getElementById('aperResponsable').value.trim();
+  if (!resp) { toast('Ingresa el nombre del responsable','err'); return; }
+  const base = calcBase();
+  const denom = getDenomData();
+
+  // Verificar si ya hay caja para este día
+  if (cajas.find(c => c.fecha === fecha && c.estado !== 'cerrada')) {
+    toast('Ya existe una caja abierta para esta fecha','err'); return;
+  }
+
+  cajaHoy = {
+    fecha,
+    responsable: resp,
+    base,
+    denominaciones: denom,
+    movimientos: [],
+    estado: 'abierta',
+    abiertaAt: new Date().toISOString()
+  };
+  cajas.push(cajaHoy);
+  saveData();
+  closeModal('modalApertura');
+  toast('✅ Caja abierta: base '+fmtCur(base),'ok');
+  render();
+}
+
+// ── MOVIMIENTOS MANUALES ─────────────────────────────────
+function openMovModal() {
+  document.getElementById('movMonto').value = '';
+  document.getElementById('movDesc').value = '';
+  document.getElementById('modalMovimiento').classList.add('open');
+}
+
+function guardarMovimiento() {
+  const tipo   = document.getElementById('movTipo').value;
+  const metodo = document.getElementById('movMetodo').value;
+  const banco  = document.getElementById('movBanco').value;
+  const monto  = parseFloat(document.getElementById('movMonto').value)||0;
+  const desc   = document.getElementById('movDesc').value.trim();
+
+  if (monto <= 0) { toast('Ingresa un monto válido','err'); return; }
+  if (!desc) { toast('Ingresa una descripción','err'); return; }
+
+  if (!cajaHoy) { toast('La caja no está abierta','err'); return; }
+
+  const hora = new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+  cajaHoy.movimientos.push({ hora, tipo, metodo, banco, monto, desc, registradoAt: new Date().toISOString() });
+
+  const idx = cajas.findIndex(c => c.fecha === cajaHoy.fecha && c.estado === 'abierta');
+  if (idx >= 0) cajas[idx] = cajaHoy;
+  saveData();
+  closeModal('modalMovimiento');
+  toast('✅ Movimiento registrado','ok');
+  renderMovimientos();
+  renderResumenStats();
+}
+
+// ── CIERRE ───────────────────────────────────────────────
+function confirmarCierre() {
+  renderResumenCierre();
+  document.getElementById('modalCierre').classList.add('open');
+}
+
+function renderResumenCierre() {
+  if (!cajaHoy) return;
+  const ventasHoy = facturas.filter(f => f.fecha === cajaHoy.fecha && f.estado === 'EMITIDA' && f.tipoDoc !== 'nota_credito');
+  const movManual = cajaHoy.movimientos || [];
+
+  let ef=0, tf=0, tj=0, ch=0, cr=0, egresos=0;
+  ventasHoy.forEach(f => {
+    const m = f.pago?.metodo || '';
+    if (m==='efectivo') ef += f.total;
+    else if (m==='transferencia') tf += f.total;
+    else if (m==='tarjeta') tj += f.total;
+    else if (m==='cheque') ch += f.total;
+    else if (m==='credito') cr += f.total;
+  });
+  movManual.forEach(m => {
+    if (m.tipo==='egreso') egresos += m.monto;
+    else {
+      if (m.metodo==='efectivo') ef += m.monto;
+      else if (m.metodo==='transferencia') tf += m.monto;
+    }
+  });
+
+  const total = ef+tf+tj+ch;
+  document.getElementById('resumenCierre').innerHTML = `
+    <div class="resumen-item"><div class="resumen-val green">${fmtCur(cajaHoy.base)}</div><div class="resumen-lbl">Base</div></div>
+    <div class="resumen-item"><div class="resumen-val">${fmtCur(ef)}</div><div class="resumen-lbl">💵 Efectivo</div></div>
+    <div class="resumen-item"><div class="resumen-val blue">${fmtCur(tf)}</div><div class="resumen-lbl">🏦 Transferencias</div></div>
+    <div class="resumen-item"><div class="resumen-val yellow">${fmtCur(tj)}</div><div class="resumen-lbl">💳 Tarjetas</div></div>
+    <div class="resumen-item"><div class="resumen-val">${fmtCur(ch)}</div><div class="resumen-lbl">📄 Cheques</div></div>
+    <div class="resumen-item"><div class="resumen-val red">${fmtCur(cr)}</div><div class="resumen-lbl">📋 Créditos</div></div>
+    <div class="resumen-item"><div class="resumen-val red">${fmtCur(egresos)}</div><div class="resumen-lbl">Egresos</div></div>
+    <div class="resumen-item" style="background:#dbeafe"><div class="resumen-val blue">${fmtCur(total - egresos)}</div><div class="resumen-lbl">TOTAL NETO</div></div>
+  `;
+}
+
+function ejecutarCierre() {
+  if (!cajaHoy) return;
+  cajaHoy.estado = 'cerrada';
+  cajaHoy.cerradaAt = new Date().toISOString();
+  const idx = cajas.findIndex(c => c.fecha === cajaHoy.fecha);
+  if (idx >= 0) cajas[idx] = cajaHoy;
+  cajaHoy = null;
+  saveData();
+  closeModal('modalCierre');
+  toast('🔒 Caja cerrada correctamente','ok');
+  render();
+}
+
+// ── FIREBASE SYNC ────────────────────────────────────────
+if (window.BXD_FB) {
+  BXD_FB.load(SK_CAJA, function(data) {
+    cajas = Array.isArray(data) ? data : (data.cajas || []);
+    cajaHoy = cajas.find(c => c.fecha === today() && c.estado === 'abierta') || null;
+    render();
+  });
+  BXD_FB.load(SK_FACT, function(data) {
+    facturas = data.facturas || [];
+    render();
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────
+loadData();
+render();
+</script>
+</body>
+</html>

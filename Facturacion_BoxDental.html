@@ -767,11 +767,21 @@ td{padding:8px 12px;vertical-align:middle}
         </select>
       </div>
       <div class="pay-field">
+        <label>Operador</label>
+        <select id="payTarjetaOperador">
+          <option value="Payphone">Payphone</option>
+          <option value="PayPal">PayPal</option>
+          <option value="Datafast">Datafast</option>
+          <option value="Credibanco">Credibanco</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="pay-field">
         <label>Últimos 4 dígitos</label>
         <input type="text" id="payTarjeta4" maxlength="4" placeholder="XXXX">
       </div>
       <div class="pay-field">
-        <label>Nº Voucher</label>
+        <label>Nº Voucher / Ref</label>
         <input type="text" id="payTarjetaVoucher" placeholder="Nº aprobación">
       </div>
     </div>
@@ -793,8 +803,18 @@ td{padding:8px 12px;vertical-align:middle}
     <!-- Credito details -->
     <div class="pay-details" id="payDetCredito">
       <div class="pay-field">
-        <label>Plazo (días)</label>
-        <input type="number" id="payCreditoPlazo" min="1" value="30" placeholder="30">
+        <label>Plazo de pago</label>
+        <select id="payCreditoPlazo" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-weight:600" onchange="calcVencimientoCredito()">
+          <option value="8">8 días</option>
+          <option value="15">15 días</option>
+          <option value="30" selected>30 días</option>
+          <option value="60">60 días</option>
+          <option value="90">90 días</option>
+        </select>
+      </div>
+      <div class="pay-field">
+        <label>Fecha vencimiento</label>
+        <input type="text" id="payCreditoVenc" readonly style="background:#f1f5f9;font-weight:700;color:#dc2626;border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px" placeholder="Se calcula automático">
       </div>
       <div class="pay-field">
         <label>Observaciones</label>
@@ -1296,10 +1316,20 @@ function today() { return new Date().toISOString().slice(0,10); }
 // ── PAYMENT METHODS ─────────────────────────────────────
 let selectedPay = null;
 
+function calcVencimientoCredito() {
+  const plazo = parseInt(document.getElementById('payCreditoPlazo').value) || 30;
+  const fechaBase = new Date(document.getElementById('factDate').value + 'T12:00:00');
+  fechaBase.setDate(fechaBase.getDate() + plazo);
+  const venc = fechaBase.toLocaleDateString('es-EC', {day:'2-digit', month:'long', year:'numeric'});
+  const el = document.getElementById('payCreditoVenc');
+  if (el) el.value = venc;
+}
+
 function selectPay(method) {
   selectedPay = method;
   document.querySelectorAll('.pay-card').forEach(el => el.classList.remove('sel'));
   document.getElementById('pay-' + method).classList.add('sel');
+  if (method === 'credito') setTimeout(calcVencimientoCredito, 50);
   // Hide all detail panels
   ['Efectivo','Transferencia','Tarjeta','Cheque','Credito','Mixto'].forEach(m => {
     document.getElementById('payDet'+m).classList.remove('open');
@@ -1312,14 +1342,21 @@ function selectPay(method) {
   }
 }
 
+// Obtener el total REAL con descuentos aplicados
+function getTotalReal() {
+  const subtotal = currentItems.reduce((s,it) => s+it.total, 0);
+  const discount = getDiscount(subtotal);
+  const subtotalDisc = subtotal - discount;
+  const taxR = parseFloat(document.getElementById('taxRate').value) || 0;
+  return Math.round((subtotalDisc + subtotalDisc * taxR / 100) * 100) / 100;
+}
+
 function calcCambio() {
   const received = parseFloat(document.getElementById('payEfectivoMonto').value) || 0;
-  const subtotal = currentItems.reduce((s,it) => s+it.total, 0);
-  const taxR = parseFloat(document.getElementById('taxRate').value) || 0;
-  const total = subtotal + (subtotal * taxR / 100);
-  const cambio = received - total;
+  const total = getTotalReal();
+  const cambio = Math.round((received - total) * 100) / 100;
   const box = document.getElementById('cambioBox');
-  box.textContent = cambio >= 0 ? fmtCur(cambio) : '⚠️ Falta ' + fmtCur(Math.abs(cambio));
+  box.textContent = cambio >= 0 ? 'Cambio: ' + fmtCur(cambio) : '⚠️ Falta: ' + fmtCur(Math.abs(cambio));
   box.style.background = cambio >= 0 ? '#dcfce7' : '#fee2e2';
   box.style.color = cambio >= 0 ? '#166534' : '#991b1b';
 }
@@ -1330,10 +1367,7 @@ function getPaymentData() {
   switch(selectedPay) {
     case 'efectivo':
       data.montoRecibido = parseFloat(document.getElementById('payEfectivoMonto').value) || 0;
-      const subtotal = currentItems.reduce((s,it) => s+it.total, 0);
-      const taxR = parseFloat(document.getElementById('taxRate').value) || 0;
-      const total = subtotal + (subtotal * taxR / 100);
-      data.cambio = data.montoRecibido - total;
+      data.cambio = Math.round((data.montoRecibido - getTotalReal()) * 100) / 100;
       break;
     case 'transferencia':
       data.banco = document.getElementById('payTransBanco').value.trim();
@@ -1341,6 +1375,7 @@ function getPaymentData() {
       break;
     case 'tarjeta':
       data.tipo = document.getElementById('payTarjetaTipo').value;
+      data.operador = document.getElementById('payTarjetaOperador') ? document.getElementById('payTarjetaOperador').value : '';
       data.ultimos4 = document.getElementById('payTarjeta4').value.trim();
       data.voucher = document.getElementById('payTarjetaVoucher').value.trim();
       break;
@@ -1349,10 +1384,16 @@ function getPaymentData() {
       data.numero = document.getElementById('payChequeNum').value.trim();
       data.fecha = document.getElementById('payChequeFecha').value;
       break;
-    case 'credito':
-      data.plazo = parseInt(document.getElementById('payCreditoPlazo').value) || 30;
+    case 'credito': {
+      const plazo = parseInt(document.getElementById('payCreditoPlazo').value) || 30;
+      data.plazo = plazo;
       data.observaciones = document.getElementById('payCreditoObs').value.trim();
+      // Calcular fecha de vencimiento
+      const fechaBase = new Date(document.getElementById('factDate').value + 'T12:00:00');
+      fechaBase.setDate(fechaBase.getDate() + plazo);
+      data.vencimiento = fechaBase.toISOString().split('T')[0];
       break;
+    }
     case 'mixto':
       data.detalle = document.getElementById('payMixtoDetalle').value.trim();
       break;
@@ -2219,10 +2260,10 @@ function removeItem(idx) {
 }
 
 function updateItemQty(idx, val) {
-  const n = parseInt(val);
-  if (isNaN(n) || n < 1) return;
+  const n = parseFloat(val);
+  if (isNaN(n) || n <= 0) return;
   currentItems[idx].qty = n;
-  currentItems[idx].total = n * (currentItems[idx].precioUnit - (currentItems[idx].descUnit || 0));
+  currentItems[idx].total = Math.round(n * (currentItems[idx].precioUnit - (currentItems[idx].descUnit || 0)) * 100) / 100;
   renderItems();
   recalcTotals();
   autoGuardar();
@@ -2231,8 +2272,12 @@ function updateItemQty(idx, val) {
 function updateItemPrice(idx, val) {
   const n = parseFloat(val);
   if (isNaN(n) || n < 0) return;
+  const costo = getCosto(currentItems[idx].id);
+  if (n > 0 && n < costo) {
+    showToast('⚠️ El precio $'+n.toFixed(2)+' está por debajo del costo ($'+costo.toFixed(2)+'). Se marcará en rojo.','err');
+  }
   currentItems[idx].precioUnit = n;
-  currentItems[idx].total = currentItems[idx].qty * (n - (currentItems[idx].descUnit || 0));
+  currentItems[idx].total = Math.round(currentItems[idx].qty * (n - (currentItems[idx].descUnit || 0)) * 100) / 100;
   renderItems();
   recalcTotals();
   autoGuardar();
@@ -2243,7 +2288,7 @@ function updateItemDisc(idx, val) {
   if (isNaN(n) || n < 0) return;
   const it = currentItems[idx];
   it.descUnit = Math.min(n, it.precioUnit);
-  it.total = it.qty * (it.precioUnit - it.descUnit);
+  it.total = Math.round(it.qty * (it.precioUnit - it.descUnit) * 100) / 100;
   renderItems();
   recalcTotals();
   autoGuardar();
@@ -2268,9 +2313,9 @@ function renderItems() {
       <td class="it-img">${imgHtml}</td>
       <td class="it-name">${escH(it.nombre)}<small>${escH(it.categoria)}${it.qty > stock ? ' — ⚠️ Stock insuficiente ('+stock+')' : ''}</small></td>
       <td class="it-pvp"><span class="pvp-tag">${fmtCur(pvp)}</span></td>
-      <td class="it-qty"><input type="number" min="1" value="${it.qty}" onchange="updateItemQty(${i},this.value)" onfocus="this.select()"${stockWarn}></td>
-      <td class="it-price"><input type="number" min="0" step="0.01" value="${it.precioUnit.toFixed(2)}" onchange="updateItemPrice(${i},this.value)" onfocus="this.select()"></td>
-      <td class="it-disc no-print"><input type="number" min="0" step="0.01" value="${disc.toFixed(2)}" onchange="updateItemDisc(${i},this.value)" onfocus="this.select()" placeholder="0.00"></td>
+      <td class="it-qty"><input type="number" min="1" value="${it.qty}" oninput="updateItemQty(${i},this.value)" onchange="updateItemQty(${i},this.value)" onfocus="this.select()"${stockWarn}></td>
+      <td class="it-price"><input type="number" min="0" step="0.01" value="${it.precioUnit.toFixed(2)}" oninput="updateItemPrice(${i},this.value)" onchange="updateItemPrice(${i},this.value)" onfocus="this.select()" style="${it.precioUnit < getCosto(it.id) ? 'border-color:#dc2626;background:#fee2e2;' : ''}"></td>
+      <td class="it-disc no-print"><input type="number" min="0" step="0.01" value="${disc.toFixed(2)}" oninput="updateItemDisc(${i},this.value)" onchange="updateItemDisc(${i},this.value)" onfocus="this.select()" placeholder="0.00"></td>
       <td class="it-total">${fmtCur(it.total)}</td>
       <td class="it-del no-print"><button onclick="removeItem(${i})" title="Quitar">✕</button></td>
     </tr>`;
@@ -2367,6 +2412,14 @@ function emitirFactura() {
   if (!nombre) { showToast('⚠️ Ingresa el nombre del cliente','err'); return; }
   if (!ruc) { showToast('⚠️ Ingresa el RUC o Cédula','err'); return; }
   if (currentItems.length === 0) { showToast('⚠️ Agrega al menos un producto','err'); return; }
+
+  // Check prices below cost
+  const belowCost = currentItems.filter(it => it.precioUnit > 0 && it.precioUnit < getCosto(it.id));
+  if (belowCost.length > 0) {
+    const names = belowCost.map(it => it.nombre.substring(0,30)).join(', ');
+    showToast('❌ No puedes emitir: precio menor al costo en: ' + names, 'err');
+    return;
+  }
 
   // Check stock for all items
   let stockError = false;
