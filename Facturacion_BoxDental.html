@@ -3494,10 +3494,10 @@ init();
       <div class="compra-section">
         <div class="compra-section-title">🏢 Datos del Proveedor</div>
         <div class="compra-grid">
-          <div class="compra-field" style="grid-column:span 2">
+          <div class="compra-field" style="grid-column:span 2;position:relative">
             <label>Proveedor *</label>
-            <input type="text" id="cmpProveedor" list="proveedoresList" placeholder="Nombre del proveedor">
-            <datalist id="proveedoresList"></datalist>
+            <input type="text" id="cmpProveedor" placeholder="Escribe para buscar proveedor..." autocomplete="off" oninput="cmpBuscarProv(this.value)" onfocus="cmpBuscarProv(this.value)">
+            <div id="cmpProvDrop" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1.5px solid #7c3aed;border-radius:8px;max-height:200px;overflow-y:auto;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
           </div>
           <div class="compra-field">
             <label>Nº Factura Proveedor</label>
@@ -3579,6 +3579,7 @@ init();
               <th>Fec. Caducidad</th>
               <th>Cantidad</th>
               <th>Costo Unit. ($)</th>
+              <th>% Ganancia</th>
               <th>P. Venta ($)</th>
               <th>Subtotal</th>
               <th></th>
@@ -3610,9 +3611,32 @@ init();
 // ═══════════════════════════════════════════════════════
 let cmpItems = [];  // productos en esta compra
 
+// ── AUTOCOMPLETE PROVEEDORES ─────────────────────────────
+function cmpBuscarProv(q) {
+  const drop = document.getElementById('cmpProvDrop');
+  if (!drop) return;
+  const ql = (q||'').trim().toLowerCase();
+  const matches = proveedores.filter(p => !ql || p.toLowerCase().includes(ql));
+  if (!matches.length) { drop.style.display='none'; return; }
+  drop.style.display = 'block';
+  drop.innerHTML = matches.map(p =>
+    `<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9"
+      onmousedown="cmpSelProv('${p.replace(/'/g,"\\'")}');return false;"
+      onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background=''">
+      🏢 ${p}
+    </div>`
+  ).join('');
+}
+
+function cmpSelProv(nombre) {
+  document.getElementById('cmpProveedor').value = nombre;
+  document.getElementById('cmpProvDrop').style.display = 'none';
+}
+
 function abrirCompra() {
   cmpItems = [];
   document.getElementById('cmpProveedor').value = '';
+  document.getElementById('cmpProvDrop').style.display = 'none';
   document.getElementById('cmpNumFact').value = '';
   document.getElementById('cmpFecha').value = today();
   document.getElementById('cmpEstadoPago').value = 'cancelada';
@@ -3629,10 +3653,6 @@ function abrirCompra() {
     const s = JSON.parse(sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1') || '{}');
     document.getElementById('cmpResponsable').value = s.name || '';
   } catch(e) {}
-
-  // Cargar lista de proveedores desde inventario
-  const dl = document.getElementById('proveedoresList');
-  dl.innerHTML = proveedores.map(p => `<option value="${p}">`).join('');
 
   renderCmpProductos();
   document.getElementById('compraOverlay').classList.add('open');
@@ -3691,7 +3711,8 @@ function cmpAddProd(id) {
     const p = getProd(id);
     const costo = getCosto(id);
     const pvp = getPrecio(id);
-    cmpItems.push({ id, nombre: getNombre(id), categoria: p.categoria||'', lote:'', fechaFab:'', fechaCad:'', qty: 1, costo, pvp, subtotal: costo });
+    const pctGanancia = costo > 0 && pvp > costo ? Math.round((pvp/costo - 1)*100*100)/100 : 0;
+    cmpItems.push({ id, nombre: getNombre(id), categoria: p.categoria||'', lote:'', fechaFab:'', fechaCad:'', qty: 1, costo, pctGanancia, pvp, subtotal: costo });
   }
   document.getElementById('cmpProdSearch').value = '';
   document.getElementById('cmpProdResults').style.display = 'none';
@@ -3699,6 +3720,7 @@ function cmpAddProd(id) {
 }
 
 function cmpRecalcItem(it) {
+  if (it.pctGanancia === undefined) it.pctGanancia = 0;
   it.subtotal = Math.round(it.qty * it.costo * 100) / 100;
 }
 
@@ -3708,14 +3730,42 @@ function cmpRemoveProd(idx) {
 }
 
 function cmpUpdateField(idx, field, val) {
-  if (field === 'qty')   { cmpItems[idx].qty   = Math.max(0.001, parseFloat(val)||0); }
-  if (field === 'costo') { cmpItems[idx].costo  = parseFloat(val)||0; }
-  if (field === 'pvp')   { cmpItems[idx].pvp    = parseFloat(val)||0; }
-  if (field === 'lote')  { cmpItems[idx].lote   = val; return; }
-  if (field === 'fab')   { cmpItems[idx].fechaFab = val; return; }
-  if (field === 'cad')   { cmpItems[idx].fechaCad = val; return; }
-  cmpRecalcItem(cmpItems[idx]);
-  document.getElementById('cmpTotal_'+idx).textContent = '$'+cmpItems[idx].subtotal.toFixed(2);
+  const it = cmpItems[idx];
+  if (field === 'lote') { it.lote = val; return; }
+  if (field === 'fab')  { it.fechaFab = val; return; }
+  if (field === 'cad')  { it.fechaCad = val; return; }
+
+  if (field === 'qty')   { it.qty   = Math.max(0.001, parseFloat(val)||0); }
+  if (field === 'costo') {
+    it.costo = parseFloat(val)||0;
+    // Recalcular PVP si hay % de ganancia
+    if (it.pctGanancia > 0) {
+      it.pvp = Math.round(it.costo * (1 + it.pctGanancia/100) * 100) / 100;
+      const pvpEl = document.getElementById('cmpPvp_'+idx);
+      if (pvpEl) pvpEl.value = it.pvp.toFixed(2);
+    }
+  }
+  if (field === 'pct') {
+    it.pctGanancia = parseFloat(val)||0;
+    if (it.costo > 0) {
+      it.pvp = Math.round(it.costo * (1 + it.pctGanancia/100) * 100) / 100;
+      const pvpEl = document.getElementById('cmpPvp_'+idx);
+      if (pvpEl) pvpEl.value = it.pvp.toFixed(2);
+    }
+  }
+  if (field === 'pvp') {
+    it.pvp = parseFloat(val)||0;
+    // Actualizar % si costo conocido
+    if (it.costo > 0) {
+      it.pctGanancia = Math.round((it.pvp/it.costo - 1)*100*100)/100;
+      const pctEl = document.getElementById('cmpPct_'+idx);
+      if (pctEl) pctEl.value = it.pctGanancia.toFixed(2);
+    }
+  }
+
+  cmpRecalcItem(it);
+  const totEl = document.getElementById('cmpTotal_'+idx);
+  if (totEl) totEl.textContent = '$'+it.subtotal.toFixed(2);
   cmpUpdateTotal();
 }
 
@@ -3734,16 +3784,17 @@ function renderCmpProductos() {
   }
   tbody.innerHTML = cmpItems.map((it, i) => `
     <tr>
-      <td style="color:#94a3b8;font-weight:700">${i+1}</td>
+      <td style="color:#94a3b8;font-weight:700;text-align:center">${i+1}</td>
       <td><div style="font-weight:700;font-size:12px">${it.nombre}</div><div style="color:#94a3b8;font-size:10px">${it.categoria}</div></td>
-      <td><input value="${it.lote}" placeholder="Lote" oninput="cmpUpdateField(${i},'lote',this.value)" style="width:80px"></td>
-      <td><input type="date" value="${it.fechaFab}" oninput="cmpUpdateField(${i},'fab',this.value)" style="width:110px"></td>
-      <td><input type="date" value="${it.fechaCad}" oninput="cmpUpdateField(${i},'cad',this.value)" style="width:110px"></td>
+      <td><input value="${it.lote||''}" placeholder="Lote" oninput="cmpUpdateField(${i},'lote',this.value)" style="width:80px"></td>
+      <td><input type="date" value="${it.fechaFab||''}" onchange="cmpUpdateField(${i},'fab',this.value)" style="width:120px;padding:4px 6px"></td>
+      <td><input type="date" value="${it.fechaCad||''}" onchange="cmpUpdateField(${i},'cad',this.value)" style="width:120px;padding:4px 6px;${it.fechaCad && new Date(it.fechaCad) < new Date() ? 'border-color:#dc2626;background:#fee2e2;' : ''}"></td>
       <td><input type="number" value="${it.qty}" min="0.001" step="0.001" oninput="cmpUpdateField(${i},'qty',this.value)" style="width:70px;text-align:center"></td>
       <td><input type="number" value="${it.costo.toFixed(2)}" min="0" step="0.01" oninput="cmpUpdateField(${i},'costo',this.value)" style="width:80px;text-align:right"></td>
-      <td><input type="number" value="${it.pvp.toFixed(2)}" min="0" step="0.01" oninput="cmpUpdateField(${i},'pvp',this.value)" style="width:80px;text-align:right"></td>
-      <td id="cmpTotal_${i}" style="text-align:right;font-weight:700;color:#7c3aed">$${it.subtotal.toFixed(2)}</td>
-      <td><button onclick="cmpRemoveProd(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem">✕</button></td>
+      <td><input id="cmpPct_${i}" type="number" value="${(it.pctGanancia||0).toFixed(2)}" min="0" step="0.01" placeholder="%" oninput="cmpUpdateField(${i},'pct',this.value)" style="width:70px;text-align:center;background:#fef9c3"></td>
+      <td><input id="cmpPvp_${i}" type="number" value="${it.pvp.toFixed(2)}" min="0" step="0.01" oninput="cmpUpdateField(${i},'pvp',this.value)" style="width:80px;text-align:right;background:#dcfce7;font-weight:700"></td>
+      <td id="cmpTotal_${i}" style="text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap">$${it.subtotal.toFixed(2)}</td>
+      <td><button onclick="cmpRemoveProd(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;padding:4px">✕</button></td>
     </tr>
   `).join('');
   cmpUpdateTotal();
@@ -3802,8 +3853,11 @@ function guardarCompra() {
   if (!compras) compras = [];
   compras.unshift(compra);
 
-  // Agregar proveedor a lista si es nuevo
-  if (!proveedores.includes(proveedor)) proveedores.push(proveedor);
+  // Agregar proveedor a lista si es nuevo (guardado permanente)
+  if (!proveedores.includes(proveedor)) {
+    proveedores.push(proveedor);
+    proveedores.sort();
+  }
 
   // Guardar todo
   saveAll();
@@ -3811,11 +3865,15 @@ function guardarCompra() {
   cerrarCompra();
 }
 
-// Cerrar resultados al click fuera
+// Cerrar dropdowns al click fuera
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#cmpProdSearch') && !e.target.closest('#cmpProdResults')) {
     const r = document.getElementById('cmpProdResults');
     if (r) r.style.display = 'none';
+  }
+  if (!e.target.closest('#cmpProveedor') && !e.target.closest('#cmpProvDrop')) {
+    const d = document.getElementById('cmpProvDrop');
+    if (d) d.style.display = 'none';
   }
 });
 
