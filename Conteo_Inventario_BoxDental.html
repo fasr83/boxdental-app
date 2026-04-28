@@ -1457,8 +1457,9 @@ function openDetalle(id) {
   const pctG = getExtra(id, 'pctGanancia');
   document.getElementById('detallePctGanancia').value = pctG != null ? pctG : '';
   const pvpSaved = getExtra(id, 'pvp');
-  document.getElementById('detallePVP').value = pvpSaved != null ? pvpSaved : '';
-  calcPVP();
+  document.getElementById('detallePVP').value = pvpSaved != null ? pvpSaved.toFixed(2) : '';
+  // Solo recalcular si hay % guardado (calcPVP respeta la condición internamente)
+  if (pctG != null) calcPVP();
   // proveedores list
   renderProvList(id);
   // sales history inside detail modal
@@ -1495,7 +1496,10 @@ function guardarDetalle() {
 // ── PVP CALCULATION ─────────────────────────────────────
 function calcPVP() {
   const costo = parseFloat(document.getElementById('detalleCosto').value) || 0;
-  const pct = parseFloat(document.getElementById('detallePctGanancia').value) || 0;
+  const pctRaw = document.getElementById('detallePctGanancia').value;
+  const pct = parseFloat(pctRaw) || 0;
+  // Solo recalcular si hay un % ingresado; si no, preservar PVP guardado
+  if (!pctRaw || pctRaw.trim() === '') return;
   const pvp = costo * (1 + pct / 100);
   document.getElementById('detallePVP').value = pvp.toFixed(2);
   const preview = document.getElementById('pvpPreview');
