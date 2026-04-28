@@ -865,7 +865,7 @@ function getAllProds() { return [...ALL_PRODUCTS, ...customProducts]; }
 function isCustom(id) { return customProducts.some(p => p.id === id); }
 function getNombre(id) { return (extras[id] && extras[id].nombre) || getProd(id).nombre; }
 function getCosto(id) { return (extras[id] && extras[id].costo != null) ? extras[id].costo : getProd(id).costo; }
-function getPrecio(id) { return getProd(id).precio; }
+function getPrecio(id) { return (extras[id]&&extras[id].pvp!=null&&extras[id].pvp>0) ? extras[id].pvp : getProd(id).precio; }
 function getStockMin(id) { return (extras[id] && extras[id].stockMin != null) ? extras[id].stockMin : null; }
 function getQty(id) { return (conteos[id] !== undefined && conteos[id] !== '') ? conteos[id] : null; }
 function getExtra(id, key) { return extras[id] ? extras[id][key] : null; }

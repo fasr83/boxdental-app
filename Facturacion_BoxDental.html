@@ -1334,7 +1334,7 @@ function getAllProds() { return [...ALL_PRODUCTS, ...customProducts]; }
 function getProd(id) { return ALL_PRODUCTS.find(p=>p.id===id) || customProducts.find(p=>p.id===id); }
 function getNombre(id) { return (extras[id]&&extras[id].nombre) || getProd(id).nombre; }
 function getCosto(id) { return (extras[id]&&extras[id].costo!=null) ? extras[id].costo : getProd(id).costo; }
-function getPrecio(id) { return getProd(id).precio; }
+function getPrecio(id) { return (extras[id]&&extras[id].pvp!=null&&extras[id].pvp>0) ? extras[id].pvp : getProd(id).precio; }
 function getStock(id) { return (conteos[id]!==undefined && conteos[id]!=='') ? parseFloat(conteos[id]) : 0; }
 function fmtCur(v) { return '$'+parseFloat(v).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtNum(n) { return String(n).padStart(4,'0'); }
