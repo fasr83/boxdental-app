@@ -615,7 +615,9 @@ function refreshDashboard(){
     <div class="kpi orange"><div class="kpi-label">Ticket Promedio</div><div class="kpi-val">${fmtCur(avgTicket)}</div></div>
     <div class="kpi yellow"><div class="kpi-label">Clientes Únicos</div><div class="kpi-val">${totalClientes}</div></div>
     <div class="kpi blue"><div class="kpi-label">Unidades Vendidas</div><div class="kpi-val">${totalUnits.toLocaleString('es-EC')}</div></div>
-    <div class="kpi red"><div class="kpi-label">Notas Crédito</div><div class="kpi-val">${fmtCur(notasCD.filter(n=>n.tipo==='credito').reduce((s,n)=>s+n.monto,0))}</div></div>`;
+    <div class="kpi red"><div class="kpi-label">Notas Crédito</div><div class="kpi-val">${fmtCur(
+      facturas.filter(f=>f.tipoDoc==='nota_credito'&&f.fecha?.startsWith(year)).reduce((s,f)=>s+(f.subtotal||0),0)+
+      notasCD.filter(n=>n.tipo==='credito').reduce((s,n)=>s+n.monto,0))}</div></div>`;
   // Charts
   renderChartVentasMes(yFacts,year);
   renderChartTipoDoc(yFacts);
@@ -806,19 +808,55 @@ function crearNota(){
 }
 function renderNotas(){
   const wrap=document.getElementById('notasTableWrap');
-  if(notasCD.length===0){wrap.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">No hay notas registradas</div>';return;}
-  let html='<table class="rpt-table"><thead><tr><th>Nº</th><th>Tipo</th><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Motivo</th><th class="r">Monto</th><th>Obs.</th></tr></thead><tbody>';
-  notasCD.forEach(n=>{
-    const cls=n.tipo==='credito'?'badge-nc':'badge-nd';
-    html+=`<tr><td class="bold">${n.prefix}-${fmtNum(n.id)}</td>
-      <td><span class="badge ${cls}">${n.tipo==='credito'?'CRÉDITO':'DÉBITO'}</span></td>
-      <td>${n.fecha}</td><td>${fmtNum(n.factNum)}</td><td>${escH(n.cliente)}</td>
-      <td>${escH(n.motivo)}</td><td class="r bold" style="color:${n.tipo==='credito'?'var(--red)':'var(--green)'}">
-      ${n.tipo==='credito'?'-':'+'} ${fmtCur(n.monto)}</td><td>${escH(n.obs)}</td></tr>`;});
-  const totalNC=notasCD.filter(n=>n.tipo==='credito').reduce((s,n)=>s+n.monto,0);
-  const totalND=notasCD.filter(n=>n.tipo==='debito').reduce((s,n)=>s+n.monto,0);
-  html+=`<tr class="total-row"><td colspan="6">TOTAL N. Crédito / N. Débito</td>
-    <td class="r">-${fmtCur(totalNC)} / +${fmtCur(totalND)}</td><td></td></tr></tbody></table>`;
+  // ── NC/ND emitidas desde Facturación ──
+  const notasFact=facturas.filter(f=>f.tipoDoc==='nota_credito'||f.tipoDoc==='nota_debito')
+    .sort((a,b)=>b.numero-a.numero);
+  const totalNCFact=notasFact.filter(f=>f.tipoDoc==='nota_credito').reduce((s,f)=>s+(f.subtotal||f.total||0),0);
+  const totalNDFact=notasFact.filter(f=>f.tipoDoc==='nota_debito').reduce((s,f)=>s+(f.subtotal||f.total||0),0);
+
+  let html='';
+  // ── Sección 1: NC/ND de Facturación ──
+  html+='<h3 style="margin:0 0 8px;font-size:14px;color:var(--text)">📋 Notas Emitidas (desde Módulo de Ventas)</h3>';
+  if(notasFact.length===0){
+    html+='<div style="padding:14px;color:var(--muted);background:#fff;border-radius:8px;box-shadow:var(--sh);margin-bottom:16px">No se han emitido notas de crédito o débito.</div>';
+  }else{
+    html+='<table class="rpt-table"><thead><tr><th>Nº</th><th>Tipo</th><th>Fecha</th><th>Doc. Origen</th><th>Cliente</th><th>Motivo</th><th class="r">Subtotal</th></tr></thead><tbody>';
+    notasFact.forEach(f=>{
+      const isNC=f.tipoDoc==='nota_credito';
+      const cls=isNC?'badge-nc':'badge-nd';
+      const monto=f.subtotal||f.total||0;
+      html+=`<tr>
+        <td class="bold">${f.tipoDocPrefix||''}-${fmtNum(f.numero)}</td>
+        <td><span class="badge ${cls}">${isNC?'CRÉDITO':'DÉBITO'}</span></td>
+        <td>${f.fecha}</td>
+        <td style="color:var(--muted)">${escH(f.origenDoc||'')}</td>
+        <td>${escH(f.cliente?.nombre||'')}</td>
+        <td>${escH(f.notaCDMotivo||'')}</td>
+        <td class="r bold" style="color:${isNC?'var(--red)':'var(--green)'}">${isNC?'-':'+'} ${fmtCur(monto)}</td></tr>`;
+    });
+    html+=`<tr class="total-row"><td colspan="6">TOTAL NC / ND</td>
+      <td class="r">-${fmtCur(totalNCFact)} / +${fmtCur(totalNDFact)}</td></tr></tbody></table>`;
+  }
+
+  // ── Sección 2: Notas manuales en Reportes ──
+  if(notasCD.length>0){
+    html+='<h3 style="margin:20px 0 8px;font-size:14px;color:var(--text)">📝 Notas Registradas Manualmente</h3>';
+    html+='<table class="rpt-table"><thead><tr><th>Nº</th><th>Tipo</th><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Motivo</th><th class="r">Monto</th><th>Obs.</th></tr></thead><tbody>';
+    notasCD.forEach(n=>{
+      const cls=n.tipo==='credito'?'badge-nc':'badge-nd';
+      html+=`<tr><td class="bold">${n.prefix}-${fmtNum(n.id)}</td>
+        <td><span class="badge ${cls}">${n.tipo==='credito'?'CRÉDITO':'DÉBITO'}</span></td>
+        <td>${n.fecha}</td><td>${fmtNum(n.factNum)}</td><td>${escH(n.cliente)}</td>
+        <td>${escH(n.motivo)}</td><td class="r bold" style="color:${n.tipo==='credito'?'var(--red)':'var(--green)'}">
+        ${n.tipo==='credito'?'-':'+'} ${fmtCur(n.monto)}</td><td>${escH(n.obs)}</td></tr>`;
+    });
+    const totalNC=notasCD.filter(n=>n.tipo==='credito').reduce((s,n)=>s+n.monto,0);
+    const totalND=notasCD.filter(n=>n.tipo==='debito').reduce((s,n)=>s+n.monto,0);
+    html+=`<tr class="total-row"><td colspan="6">TOTAL N. Crédito / N. Débito</td>
+      <td class="r">-${fmtCur(totalNC)} / +${fmtCur(totalND)}</td><td></td></tr></tbody></table>`;
+  }
+
+  if(!html){html='<div style="text-align:center;padding:30px;color:var(--muted)">No hay notas registradas</div>';}
   wrap.innerHTML=html;
 }
 
