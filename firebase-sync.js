@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════
-// BoxDental Firebase Sync Layer v2 — Firebase como fuente principal
-// Sincronización en tiempo real, offline persistence, auto-recovery
+// BoxDental Firebase Sync Layer v3 — Sincronización bidireccional
+// Si local es más reciente → sube a Firebase
+// Si Firebase es más reciente → baja a local
 // ═══════════════════════════════════════════════════════════
 
 (function() {
@@ -44,6 +45,7 @@
   var pendingSaves = [];
   var ready = false;
   var authRetryCount = 0;
+  var initialUploadDone = {};  // track which keys were uploaded on auth
 
   // ── Load Firebase SDK ──────────────────────────────────────
   var loadIdx = 0;
@@ -74,53 +76,84 @@
       db   = firebase.firestore();
       auth = firebase.auth();
 
-      // Offline persistence — datos disponibles sin internet
+      // Offline persistence
       db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
         if (err.code === 'failed-precondition') {
-          // Múltiples pestañas — solo una puede tener persistencia
           console.warn('[BXD_FB] Persistencia solo en una pestaña');
         }
       });
 
-      // Escuchar cambios de autenticación
       auth.onAuthStateChanged(function(user) {
         currentUser = user;
         if (user) {
-          console.log('[BXD_FB] Autenticado:', user.email);
+          console.log('[BXD_FB] Autenticado:', user.email || 'anónimo');
           showSyncStatus('conectado');
+
           // Procesar saves pendientes
           var pending = pendingSaves.slice();
           pendingSaves = [];
           pending.forEach(function(p) { pushToFirestore(p.key, p.data); });
-          // Activar listeners en tiempo real para todas las keys registradas
+
+          // Subir datos locales existentes a Firebase (sincronización inicial)
+          uploadLocalDataOnAuth();
+
+          // Activar listeners en tiempo real
           Object.keys(syncCallbacks).forEach(function(key) {
             startRealtimeListener(key);
           });
         } else {
           showSyncStatus('sin-sesion');
-          // Detener todos los listeners
           Object.keys(realtimeUnsubs).forEach(function(key) {
             if (realtimeUnsubs[key]) { realtimeUnsubs[key](); delete realtimeUnsubs[key]; }
           });
-          // Auto-reintentar login desde sesión guardada
           tryAutoLogin();
         }
       });
 
       ready = true;
       tryAutoLogin();
-      console.log('[BXD_FB] Firebase listo v2');
+      console.log('[BXD_FB] Firebase listo v3');
     } catch(e) {
       console.error('[BXD_FB] Error de inicialización:', e);
       showSyncStatus('error');
     }
   }
 
+  // ── Subir datos locales a Firebase al autenticarse ─────────
+  function uploadLocalDataOnAuth() {
+    Object.keys(KEY_TO_DOC).forEach(function(lsKey) {
+      if (initialUploadDone[lsKey]) return;
+      var localRaw = localStorage.getItem(lsKey);
+      if (!localRaw) return;
+      try {
+        var localData = JSON.parse(localRaw);
+        var localTime = localData.savedAt ? new Date(localData.savedAt).getTime() : 0;
+        if (!localTime) return; // Sin timestamp, no subir
+
+        // Verificar si Firebase tiene datos más recientes antes de subir
+        var docName = KEY_TO_DOC[lsKey];
+        if (!docName || !db) return;
+
+        db.collection(COLLECTION).doc(docName).get().then(function(doc) {
+          var fbTime = doc.exists ? (doc.data()._savedAt || 0) : 0;
+          if (!doc.exists || localTime > fbTime) {
+            console.log('[BXD_FB] Subiendo datos locales al iniciar sesión:', docName);
+            pushToFirestore(lsKey, localData);
+          }
+          initialUploadDone[lsKey] = true;
+        }).catch(function(err) {
+          console.warn('[BXD_FB] Error verificando doc para upload inicial:', err.message);
+        });
+      } catch(e) {
+        console.warn('[BXD_FB] Error parseando localStorage para upload:', lsKey);
+      }
+    });
+  }
+
   // ── Auto-login desde sesión guardada ─────────────────────
   function tryAutoLogin() {
     if (!auth || currentUser) return;
     if (authRetryCount > 3) {
-      // Fallback: autenticación anónima para garantizar sync en cualquier dispositivo
       signInAnonymously();
       return;
     }
@@ -152,68 +185,79 @@
     if (!auth || currentUser) return;
     auth.signInAnonymously().catch(function(e) {
       console.warn('[BXD_FB] Anon auth failed:', e.message);
+      showSyncStatus('sin-conexion');
     });
   }
 
-  // ── Listener en tiempo real (onSnapshot) ─────────────────
+  // ── Listener en tiempo real (onSnapshot) — BIDIRECCIONAL ─
   function startRealtimeListener(lsKey) {
     var docName = KEY_TO_DOC[lsKey];
     if (!docName || !db || !currentUser) return;
 
-    // Cancelar listener previo si existe
     if (realtimeUnsubs[lsKey]) {
       realtimeUnsubs[lsKey]();
     }
 
-    console.log('[BXD_FB] Iniciando listener tiempo real:', docName);
+    console.log('[BXD_FB] Listener tiempo real:', docName);
 
     var unsub = db.collection(COLLECTION).doc(docName)
       .onSnapshot(function(doc) {
+
+        // ── Documento NO existe en Firebase ──────────────────
         if (!doc.exists) {
-          // Documento no existe en Firebase — subir localStorage si tiene datos
           var localRaw = localStorage.getItem(lsKey);
           if (localRaw) {
             try {
               var localData = JSON.parse(localRaw);
               pushToFirestore(lsKey, localData);
-              console.log('[BXD_FB] Subiendo datos locales a nube:', docName);
+              console.log('[BXD_FB] Documento nuevo — subiendo local:', docName);
             } catch(e) {}
           }
           return;
         }
 
+        // ── Documento EXISTE en Firebase ─────────────────────
         var fbData = doc.data();
-        // Quitar campos internos con _
-        var cleanData = {};
-        Object.keys(fbData).forEach(function(k) {
-          if (k.charAt(0) !== '_') cleanData[k] = fbData[k];
-        });
-
-        // FIREBASE ES LA FUENTE DE VERDAD — siempre actualizar localStorage
         var fbTime = fbData._savedAt || 0;
+
         var localRaw = localStorage.getItem(lsKey);
         var localTime = 0;
         if (localRaw) {
-          try { localTime = JSON.parse(localRaw).savedAt ? new Date(JSON.parse(localRaw).savedAt).getTime() : 0; } catch(e) {}
+          try {
+            var parsed = JSON.parse(localRaw);
+            localTime = parsed.savedAt ? new Date(parsed.savedAt).getTime() : 0;
+          } catch(e) {}
         }
 
-        // Solo actualizar si Firebase tiene datos más recientes
-        // (evitar loop: cuando nosotros guardamos y se dispara el snapshot)
-        if (fbTime > localTime || !localRaw) {
+        if (localRaw && localTime > fbTime + 2000) {
+          // Local es MÁS RECIENTE que Firebase (margen de 2s) → subir local
+          console.log('[BXD_FB] Local más reciente → subiendo a nube:', docName, 'local:', localTime, 'fb:', fbTime);
+          try {
+            pushToFirestore(lsKey, JSON.parse(localRaw));
+          } catch(e) {}
+
+        } else if (fbTime > localTime || !localRaw) {
+          // Firebase es MÁS RECIENTE → actualizar local y notificar módulo
+          var cleanData = {};
+          Object.keys(fbData).forEach(function(k) {
+            if (k.charAt(0) !== '_') cleanData[k] = fbData[k];
+          });
+
           var dataStr = JSON.stringify(cleanData);
           localStorage.setItem(lsKey, dataStr);
           try { sessionStorage.setItem(lsKey, dataStr); } catch(e) {}
           showSyncStatus('sincronizado');
-          console.log('[BXD_FB] Datos actualizados desde nube:', docName);
-          // Notificar al módulo para que re-renderice
+          console.log('[BXD_FB] Firebase más reciente → actualizando local:', docName);
+
           if (syncCallbacks[lsKey]) {
             syncCallbacks[lsKey](cleanData);
           }
         }
+        // Si son iguales (misma data) → no hacer nada
+
       }, function(err) {
         console.warn('[BXD_FB] Error listener:', docName, err.message);
         showSyncStatus('error');
-        // Reintentar en 5 segundos
         setTimeout(function() { startRealtimeListener(lsKey); }, 5000);
       });
 
@@ -226,7 +270,6 @@
     if (!docName) return;
 
     if (!db || !currentUser) {
-      // Encolar para cuando se autentique
       pendingSaves.push({ key: lsKey, data: data });
       showSyncStatus('pendiente');
       return;
@@ -235,7 +278,7 @@
     var fbData = {};
     Object.keys(data).forEach(function(k) { fbData[k] = data[k]; });
     fbData._savedAt = Date.now();
-    fbData._savedBy = currentUser.email || 'unknown';
+    fbData._savedBy = currentUser.email || currentUser.uid || 'unknown';
 
     showSyncStatus('guardando');
 
@@ -247,7 +290,6 @@
       .catch(function(err) {
         console.warn('[BXD_FB] Error al guardar:', docName, err.message);
         showSyncStatus('error');
-        // Reintentar en 3 segundos
         setTimeout(function() { pushToFirestore(lsKey, data); }, 3000);
       });
   }
@@ -257,13 +299,13 @@
     var el = document.getElementById('fbSyncStatus');
     if (!el) return;
     var estados = {
-      'sincronizado': { text: '☁️ Datos sincronizados',       color: '#059669' },
-      'guardando':    { text: '⏳ Guardando en la nube...',    color: '#d97706' },
+      'sincronizado': { text: '☁️ Sincronizado',             color: '#059669' },
+      'guardando':    { text: '⏳ Guardando en la nube...',  color: '#d97706' },
       'pendiente':    { text: '📶 Sin conexión — guardado local', color: '#f59e0b' },
-      'conectado':    { text: '🔗 Conectado a la nube',        color: '#059669' },
-      'sin-sesion':   { text: '🔒 Sincronización en espera',   color: '#64748b' },
-      'sin-conexion': { text: '❌ Sin conexión a Firebase',    color: '#dc2626' },
-      'error':        { text: '⚠️ Error de sincronización',    color: '#dc2626' }
+      'conectado':    { text: '🔗 Conectado',                 color: '#059669' },
+      'sin-sesion':   { text: '🔒 Sincronización en espera', color: '#64748b' },
+      'sin-conexion': { text: '❌ Sin conexión a Firebase',  color: '#dc2626' },
+      'error':        { text: '⚠️ Error de sincronización',  color: '#dc2626' }
     };
     var cfg = estados[estado] || {};
     el.textContent = cfg.text || '';
@@ -272,13 +314,10 @@
 
   // ── API Pública ───────────────────────────────────────────
   window.BXD_FB = {
-    // Guardar datos en Firestore
     save: function(lsKey, data) {
       pushToFirestore(lsKey, data);
     },
 
-    // Registrar clave para sincronización en tiempo real
-    // callback(data) se llama cuando Firebase tiene datos nuevos
     load: function(lsKey, callback) {
       syncCallbacks[lsKey] = callback;
       if (ready && currentUser) {
@@ -286,7 +325,6 @@
       }
     },
 
-    // Login explícito desde la página de inicio
     signIn: function(appUsername, appPassword) {
       if (!auth) return Promise.reject(new Error('Firebase no listo'));
       var email = USER_EMAILS[appUsername];
@@ -310,13 +348,23 @@
         });
     },
 
-    // Forzar sincronización desde la nube (útil para botón manual)
     forceSync: function(lsKey) {
       if (lsKey) {
         startRealtimeListener(lsKey);
       } else {
         Object.keys(syncCallbacks).forEach(function(k) { startRealtimeListener(k); });
       }
+    },
+
+    // Forzar subida de datos locales a Firebase
+    forceUpload: function(lsKey) {
+      var keys = lsKey ? [lsKey] : Object.keys(KEY_TO_DOC);
+      keys.forEach(function(k) {
+        var localRaw = localStorage.getItem(k);
+        if (localRaw) {
+          try { pushToFirestore(k, JSON.parse(localRaw)); } catch(e) {}
+        }
+      });
     },
 
     signOut:    function() { if (auth) return auth.signOut(); return Promise.resolve(); },
