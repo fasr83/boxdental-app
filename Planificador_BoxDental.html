@@ -210,7 +210,7 @@ input[type=range]{accent-color:#8B5CF6;padding:0}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 </style>
 <script src="auth-guard.js"></script>
-<script src="firebase-sync.js"></script>
+<script src="firebase-sync.js?v=3"></script>
 </head>
 <body>
 
@@ -223,6 +223,7 @@ input[type=range]{accent-color:#8B5CF6;padding:0}
     <div class="nav-tab" data-page="reconexion" onclick="showPage('reconexion')">👥 Reconexión</div>
   </div>
   <div class="nav-right">
+    <span id="fbSyncStatus" style="font-size:11px;font-weight:600;color:#86efac"></span>
     <div class="nav-date"><strong id="navDate"></strong><span id="navDay"></span></div>
     <button class="btn-new" onclick="openModal()"><span style="font-size:1.1rem">+</span> Nueva Tarea</button>
   </div>
@@ -444,12 +445,27 @@ function esc(s){ return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/
 function today(){ return dkey(new Date()); }
 
 function load(){
-  try{tasks=JSON.parse(localStorage.getItem(TKEY))||[];}catch(e){tasks=[];}
-  try{progress=JSON.parse(localStorage.getItem(PKEY))||[];}catch(e){progress=[];}
+  // Soporta formato array legacy Y formato objeto {tasks:[], savedAt:""} de Firebase
+  try{
+    var rawT=JSON.parse(localStorage.getItem(TKEY));
+    tasks = Array.isArray(rawT) ? rawT : (rawT && rawT.tasks ? rawT.tasks : []);
+  }catch(e){tasks=[];}
+  try{
+    var rawP=JSON.parse(localStorage.getItem(PKEY));
+    progress = Array.isArray(rawP) ? rawP : (rawP && rawP.progress ? rawP.progress : []);
+  }catch(e){progress=[];}
   DEF_PROG.forEach(d=>{if(!progress.find(p=>p.id===d.id))progress.push({...d});});
 }
-function save(){ localStorage.setItem(TKEY,JSON.stringify(tasks)); if(window.BXD_FB)BXD_FB.save(TKEY,{tasks:tasks,savedAt:new Date().toISOString()}); }
-function saveProg(){ localStorage.setItem(PKEY,JSON.stringify(progress)); if(window.BXD_FB)BXD_FB.save(PKEY,{progress:progress,savedAt:new Date().toISOString()}); }
+function save(){
+  var data={tasks:tasks,savedAt:new Date().toISOString()};
+  localStorage.setItem(TKEY,JSON.stringify(data));
+  if(window.BXD_FB)BXD_FB.save(TKEY,data);
+}
+function saveProg(){
+  var data={progress:progress,savedAt:new Date().toISOString()};
+  localStorage.setItem(PKEY,JSON.stringify(data));
+  if(window.BXD_FB)BXD_FB.save(PKEY,data);
+}
 
 function fmtDate(dk){
   const d=new Date(dk+'T12:00:00');
