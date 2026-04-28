@@ -314,7 +314,7 @@ td{padding:8px 12px;vertical-align:middle}
 
 
 /* DOC TYPE SELECTOR */
-.doc-type-row{display:flex;gap:6px;margin-bottom:8px}
+.doc-type-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
 .doc-type-btn{padding:8px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;
   font-size:12px;font-weight:700;background:#fff;transition:all .15s;color:var(--muted);
   display:flex;align-items:center;gap:5px}
@@ -322,6 +322,33 @@ td{padding:8px 12px;vertical-align:middle}
 .doc-type-btn.sel{border-color:var(--pri);background:#e0e7ff;color:var(--pri-d)}
 .doc-type-btn.sel.nota{border-color:var(--green);background:#dcfce7;color:#166534}
 .doc-type-btn.sel.cotizacion{border-color:var(--yellow);background:#fef9c3;color:#854d0e}
+.doc-type-btn.compra-btn{border-color:#7c3aed;color:#7c3aed;background:#f5f3ff}
+.doc-type-btn.compra-btn:hover{background:#ede9fe;border-color:#6d28d9}
+
+/* COMPRA MODAL */
+.compra-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:800;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.compra-overlay.open{display:flex}
+.compra-modal{background:#fff;border-radius:16px;width:100%;max-width:900px;margin:auto;box-shadow:0 24px 80px rgba(0,0,0,.4)}
+.compra-hdr{padding:18px 22px;background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center}
+.compra-hdr h3{font-size:1.1rem;font-weight:800}
+.compra-body{padding:22px}
+.compra-section{margin-bottom:20px}
+.compra-section-title{font-size:.78rem;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;border-bottom:2px solid #ede9fe;padding-bottom:6px}
+.compra-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.compra-field{display:flex;flex-direction:column;gap:4px}
+.compra-field label{font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase}
+.compra-field input,.compra-field select,.compra-field textarea{padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.compra-field input:focus,.compra-field select:focus{border-color:#7c3aed;box-shadow:0 0 0 2px rgba(124,58,237,.1)}
+
+/* TABLA PRODUCTOS COMPRA */
+.compra-prod-table{width:100%;border-collapse:collapse;font-size:12px}
+.compra-prod-table th{background:#f5f3ff;color:#6d28d9;font-size:.68rem;font-weight:700;text-transform:uppercase;padding:8px 6px;text-align:left;border-bottom:2px solid #ede9fe}
+.compra-prod-table td{padding:6px 4px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.compra-prod-table input{width:100%;padding:5px 6px;border:1.5px solid #e2e8f0;border-radius:5px;font-size:12px;outline:none}
+.compra-prod-table input:focus{border-color:#7c3aed}
+.compra-footer{padding:16px 22px;border-top:1px solid #e2e8f0;display:flex;gap:10px;justify-content:flex-end;align-items:center}
+.btn-compra-save{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-compra-save:hover{background:#6d28d9;transform:translateY(-1px)}
 
 
 /* ABONOS */
@@ -572,6 +599,7 @@ td{padding:8px 12px;vertical-align:middle}
       <div class="doc-type-row no-print">
         <div class="doc-type-btn nota sel" id="dtNota" onclick="setDocType('nota')">📋 Nota de Venta</div>
         <div class="doc-type-btn cotizacion" id="dtCotizacion" onclick="setDocType('cotizacion')">📝 Cotización</div>
+        <div class="doc-type-btn compra-btn" onclick="abrirCompra()">📦 Ingresar Compra</div>
       </div>
       <p id="docTypeLabel">NOTA DE VENTA</p>
     </div>
@@ -1295,6 +1323,7 @@ let nextCustomId = 10000;
 
 // Billing state
 let facturas = [];
+let compras = [];            // historial de compras/facturas de proveedores
 let nextFactura = 1;
 let clientes = [];
 let currentItems = [];       // [{id,nombre,categoria,qty,precioUnit,total}]
@@ -2049,6 +2078,7 @@ function init() {
   if (window.BXD_FB) {
     BXD_FB.load(SK_FACT, function(data) {
       if (data.facturas) facturas = data.facturas;
+      if (data.compras)  compras  = data.compras;
       if (data.nextFactura) nextFactura = data.nextFactura;
       if (data.clientes) clientes = data.clientes;
       if (data.taxPct) { taxPct = data.taxPct; document.getElementById('taxRate').value = taxPct; }
@@ -2169,18 +2199,18 @@ function loadFactData() {
     if (raw) {
       const d = JSON.parse(raw);
       facturas = d.facturas || [];
+      compras   = d.compras || [];
       nextFactura = d.nextFactura || 1;
       clientes = d.clientes || [];
       taxPct = d.taxPct || 15;
       document.getElementById('taxRate').value = taxPct;
     }
-  } catch(e) { facturas=[]; nextFactura=1; clientes=[]; }
+  } catch(e) { facturas=[]; compras=[]; nextFactura=1; clientes=[]; }
 }
 
 function saveFactData() {
   taxPct = parseFloat(document.getElementById('taxRate').value) || 15;
-  const data = { facturas, nextFactura, clientes, taxPct, savedAt: new Date().toISOString() };
-  // Also save clientes to shared inventory key for cross-app access
+  const data = { facturas, compras, nextFactura, clientes, taxPct, savedAt: new Date().toISOString() };
   try {
     let invRaw = localStorage.getItem(SK_INV);
     if (invRaw) { const inv = JSON.parse(invRaw); inv.clientes = clientes; localStorage.setItem(SK_INV, JSON.stringify(inv)); }
@@ -2203,7 +2233,7 @@ function saveAll() {
   // Sync to Firebase
   if (window.BXD_FB) {
     var invData = { conteos, extras, proveedores, customProducts, nextCustomId, savedAt: new Date().toISOString() };
-    var factData = { facturas, nextFactura, clientes, taxPct: parseFloat(document.getElementById('taxRate').value)||15, savedAt: new Date().toISOString() };
+    var factData = { facturas, compras, nextFactura, clientes, taxPct: parseFloat(document.getElementById('taxRate').value)||15, savedAt: new Date().toISOString() };
     BXD_FB.save(SK_INV, invData);
     BXD_FB.save(SK_FACT, factData);
   }
@@ -3447,6 +3477,353 @@ init();
 
   waitForFirebase();
 })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- MODAL INGRESAR COMPRA / FACTURA DE PROVEEDOR       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="compra-overlay" id="compraOverlay">
+  <div class="compra-modal">
+    <div class="compra-hdr">
+      <h3>📦 Ingresar Compra — Factura de Proveedor</h3>
+      <button onclick="cerrarCompra()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.2rem;cursor:pointer;border-radius:6px;width:30px;height:30px">✕</button>
+    </div>
+    <div class="compra-body">
+
+      <!-- DATOS DEL PROVEEDOR -->
+      <div class="compra-section">
+        <div class="compra-section-title">🏢 Datos del Proveedor</div>
+        <div class="compra-grid">
+          <div class="compra-field" style="grid-column:span 2">
+            <label>Proveedor *</label>
+            <input type="text" id="cmpProveedor" list="proveedoresList" placeholder="Nombre del proveedor">
+            <datalist id="proveedoresList"></datalist>
+          </div>
+          <div class="compra-field">
+            <label>Nº Factura Proveedor</label>
+            <input type="text" id="cmpNumFact" placeholder="Ej: 001-001-000123">
+          </div>
+          <div class="compra-field">
+            <label>Fecha de Factura *</label>
+            <input type="date" id="cmpFecha">
+          </div>
+          <div class="compra-field">
+            <label>Ingresado por</label>
+            <input type="text" id="cmpResponsable" placeholder="Nombre del responsable">
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGO -->
+      <div class="compra-section">
+        <div class="compra-section-title">💳 Forma de Pago</div>
+        <div class="compra-grid">
+          <div class="compra-field">
+            <label>Estado</label>
+            <select id="cmpEstadoPago" onchange="toggleCreditoCmp()">
+              <option value="cancelada">✅ Cancelada (Pagada)</option>
+              <option value="credito">📋 A Crédito</option>
+            </select>
+          </div>
+          <div class="compra-field" id="cmpCreditoDias" style="display:none">
+            <label>Días de crédito</label>
+            <select id="cmpDiasCredito">
+              <option value="8">8 días</option>
+              <option value="15">15 días</option>
+              <option value="30" selected>30 días</option>
+              <option value="60">60 días</option>
+              <option value="90">90 días</option>
+            </select>
+          </div>
+          <div class="compra-field" id="cmpVencDiv" style="display:none">
+            <label>Fecha de vencimiento</label>
+            <input type="text" id="cmpVencimiento" readonly style="background:#fef9c3;font-weight:700;color:#854d0e">
+          </div>
+          <div class="compra-field">
+            <label>Método de pago</label>
+            <select id="cmpMetodoPago">
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="tarjeta">💳 Tarjeta</option>
+              <option value="cheque">📄 Cheque</option>
+            </select>
+          </div>
+          <div class="compra-field">
+            <label>Banco / Referencia</label>
+            <input type="text" id="cmpBancoRef" placeholder="Banco o Nº referencia">
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCTOS -->
+      <div class="compra-section">
+        <div class="compra-section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Productos de la Compra</span>
+          <span style="font-size:.8rem;color:#64748b;text-transform:none;font-weight:600">Total: <span id="cmpTotalLabel" style="color:#7c3aed;font-size:.95rem">$0.00</span></span>
+        </div>
+
+        <!-- Buscador de producto -->
+        <div style="position:relative;margin-bottom:12px">
+          <input type="text" id="cmpProdSearch" placeholder="🔍 Buscar producto para agregar..." style="width:100%;padding:9px 12px;border:1.5px solid #7c3aed;border-radius:8px;font-size:13px;outline:none" oninput="cmpSearchProd(this.value)">
+          <div id="cmpProdResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #7c3aed;border-radius:8px;max-height:220px;overflow-y:auto;z-index:900;display:none;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
+        </div>
+
+        <!-- Tabla de productos -->
+        <div style="overflow-x:auto">
+          <table class="compra-prod-table">
+            <thead><tr>
+              <th>#</th>
+              <th style="min-width:200px">Producto</th>
+              <th>Lote</th>
+              <th>Fec. Fabricación</th>
+              <th>Fec. Caducidad</th>
+              <th>Cantidad</th>
+              <th>Costo Unit. ($)</th>
+              <th>P. Venta ($)</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="cmpProdBody">
+              <tr id="cmpEmptyRow"><td colspan="10" style="text-align:center;padding:20px;color:#94a3b8">Busca y agrega productos ☝</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COMENTARIOS -->
+      <div class="compra-section">
+        <div class="compra-section-title">💬 Comentarios</div>
+        <textarea id="cmpComentarios" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical" placeholder="Observaciones, notas de la compra..."></textarea>
+      </div>
+
+    </div>
+    <div class="compra-footer">
+      <button onclick="cerrarCompra()" style="background:#f1f5f9;border:none;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;color:#1e293b">Cancelar</button>
+      <button class="btn-compra-save" onclick="guardarCompra()">✅ Guardar Compra</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// MÓDULO INGRESAR COMPRA / FACTURA PROVEEDOR
+// ═══════════════════════════════════════════════════════
+let cmpItems = [];  // productos en esta compra
+
+function abrirCompra() {
+  cmpItems = [];
+  document.getElementById('cmpProveedor').value = '';
+  document.getElementById('cmpNumFact').value = '';
+  document.getElementById('cmpFecha').value = today();
+  document.getElementById('cmpEstadoPago').value = 'cancelada';
+  document.getElementById('cmpMetodoPago').value = 'efectivo';
+  document.getElementById('cmpBancoRef').value = '';
+  document.getElementById('cmpComentarios').value = '';
+  document.getElementById('cmpProdSearch').value = '';
+  document.getElementById('cmpProdResults').style.display = 'none';
+  document.getElementById('cmpCreditoDias').style.display = 'none';
+  document.getElementById('cmpVencDiv').style.display = 'none';
+
+  // Cargar responsable desde sesión
+  try {
+    const s = JSON.parse(sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1') || '{}');
+    document.getElementById('cmpResponsable').value = s.name || '';
+  } catch(e) {}
+
+  // Cargar lista de proveedores desde inventario
+  const dl = document.getElementById('proveedoresList');
+  dl.innerHTML = proveedores.map(p => `<option value="${p}">`).join('');
+
+  renderCmpProductos();
+  document.getElementById('compraOverlay').classList.add('open');
+}
+
+function cerrarCompra() {
+  document.getElementById('compraOverlay').classList.remove('open');
+}
+
+function toggleCreditoCmp() {
+  const es = document.getElementById('cmpEstadoPago').value === 'credito';
+  document.getElementById('cmpCreditoDias').style.display = es ? '' : 'none';
+  document.getElementById('cmpVencDiv').style.display = es ? '' : 'none';
+  if (es) calcVencCmp();
+}
+
+function calcVencCmp() {
+  const dias = parseInt(document.getElementById('cmpDiasCredito').value) || 30;
+  const fecha = new Date(document.getElementById('cmpFecha').value + 'T12:00:00');
+  fecha.setDate(fecha.getDate() + dias);
+  const vl = document.getElementById('cmpVencimiento');
+  if (vl) vl.value = fecha.toLocaleDateString('es-EC', {day:'2-digit', month:'long', year:'numeric'});
+}
+
+// ── BÚSQUEDA DE PRODUCTOS ────────────────────────────────
+function cmpSearchProd(q) {
+  const res = document.getElementById('cmpProdResults');
+  q = q.trim().toLowerCase();
+  if (!q) { res.style.display = 'none'; return; }
+
+  const allProds = [...ALL_PRODUCTS, ...customProducts];
+  const matches = allProds.filter(p => {
+    const nombre = getNombre(p.id).toLowerCase();
+    return nombre.includes(q) || (p.categoria||'').toLowerCase().includes(q);
+  }).slice(0, 20);
+
+  if (!matches.length) { res.style.display = 'none'; return; }
+  res.style.display = 'block';
+  res.innerHTML = matches.map(p => {
+    const nombre = getNombre(p.id);
+    const stock = getStock(p.id);
+    const costo = getCosto(p.id);
+    return `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:12px"
+      onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background=''"
+      onclick="cmpAddProd(${p.id})">
+      <div style="font-weight:700">${nombre}</div>
+      <div style="color:#64748b;font-size:11px">${p.categoria||''} · Stock: ${stock} · Costo: $${costo.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+function cmpAddProd(id) {
+  const existing = cmpItems.find(it => it.id === id);
+  if (existing) { existing.qty++; cmpRecalcItem(existing); }
+  else {
+    const p = getProd(id);
+    const costo = getCosto(id);
+    const pvp = getPrecio(id);
+    cmpItems.push({ id, nombre: getNombre(id), categoria: p.categoria||'', lote:'', fechaFab:'', fechaCad:'', qty: 1, costo, pvp, subtotal: costo });
+  }
+  document.getElementById('cmpProdSearch').value = '';
+  document.getElementById('cmpProdResults').style.display = 'none';
+  renderCmpProductos();
+}
+
+function cmpRecalcItem(it) {
+  it.subtotal = Math.round(it.qty * it.costo * 100) / 100;
+}
+
+function cmpRemoveProd(idx) {
+  cmpItems.splice(idx, 1);
+  renderCmpProductos();
+}
+
+function cmpUpdateField(idx, field, val) {
+  if (field === 'qty')   { cmpItems[idx].qty   = Math.max(0.001, parseFloat(val)||0); }
+  if (field === 'costo') { cmpItems[idx].costo  = parseFloat(val)||0; }
+  if (field === 'pvp')   { cmpItems[idx].pvp    = parseFloat(val)||0; }
+  if (field === 'lote')  { cmpItems[idx].lote   = val; return; }
+  if (field === 'fab')   { cmpItems[idx].fechaFab = val; return; }
+  if (field === 'cad')   { cmpItems[idx].fechaCad = val; return; }
+  cmpRecalcItem(cmpItems[idx]);
+  document.getElementById('cmpTotal_'+idx).textContent = '$'+cmpItems[idx].subtotal.toFixed(2);
+  cmpUpdateTotal();
+}
+
+function cmpUpdateTotal() {
+  const total = cmpItems.reduce((s, it) => s + it.subtotal, 0);
+  const el = document.getElementById('cmpTotalLabel');
+  if (el) el.textContent = '$' + total.toFixed(2);
+}
+
+function renderCmpProductos() {
+  const tbody = document.getElementById('cmpProdBody');
+  if (!cmpItems.length) {
+    tbody.innerHTML = '<tr id="cmpEmptyRow"><td colspan="10" style="text-align:center;padding:20px;color:#94a3b8">Busca y agrega productos ☝</td></tr>';
+    cmpUpdateTotal();
+    return;
+  }
+  tbody.innerHTML = cmpItems.map((it, i) => `
+    <tr>
+      <td style="color:#94a3b8;font-weight:700">${i+1}</td>
+      <td><div style="font-weight:700;font-size:12px">${it.nombre}</div><div style="color:#94a3b8;font-size:10px">${it.categoria}</div></td>
+      <td><input value="${it.lote}" placeholder="Lote" oninput="cmpUpdateField(${i},'lote',this.value)" style="width:80px"></td>
+      <td><input type="date" value="${it.fechaFab}" oninput="cmpUpdateField(${i},'fab',this.value)" style="width:110px"></td>
+      <td><input type="date" value="${it.fechaCad}" oninput="cmpUpdateField(${i},'cad',this.value)" style="width:110px"></td>
+      <td><input type="number" value="${it.qty}" min="0.001" step="0.001" oninput="cmpUpdateField(${i},'qty',this.value)" style="width:70px;text-align:center"></td>
+      <td><input type="number" value="${it.costo.toFixed(2)}" min="0" step="0.01" oninput="cmpUpdateField(${i},'costo',this.value)" style="width:80px;text-align:right"></td>
+      <td><input type="number" value="${it.pvp.toFixed(2)}" min="0" step="0.01" oninput="cmpUpdateField(${i},'pvp',this.value)" style="width:80px;text-align:right"></td>
+      <td id="cmpTotal_${i}" style="text-align:right;font-weight:700;color:#7c3aed">$${it.subtotal.toFixed(2)}</td>
+      <td><button onclick="cmpRemoveProd(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem">✕</button></td>
+    </tr>
+  `).join('');
+  cmpUpdateTotal();
+}
+
+// ── GUARDAR COMPRA ────────────────────────────────────────
+function guardarCompra() {
+  const proveedor = document.getElementById('cmpProveedor').value.trim();
+  const fecha     = document.getElementById('cmpFecha').value;
+  if (!proveedor) { showToast('⚠️ Ingresa el nombre del proveedor','err'); return; }
+  if (!fecha)     { showToast('⚠️ Ingresa la fecha de la factura','err'); return; }
+  if (!cmpItems.length) { showToast('⚠️ Agrega al menos un producto','err'); return; }
+
+  const total = cmpItems.reduce((s, it) => s + it.subtotal, 0);
+  const estPago = document.getElementById('cmpEstadoPago').value;
+  const dias = parseInt(document.getElementById('cmpDiasCredito').value) || 30;
+  const fechaVenc = estPago === 'credito' ? (() => {
+    const d = new Date(fecha + 'T12:00:00');
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().split('T')[0];
+  })() : null;
+
+  const compra = {
+    id: Date.now(),
+    proveedor,
+    numFactProv: document.getElementById('cmpNumFact').value.trim(),
+    fecha,
+    responsable: document.getElementById('cmpResponsable').value.trim(),
+    estadoPago: estPago,
+    diasCredito: estPago === 'credito' ? dias : null,
+    fechaVencimiento: fechaVenc,
+    metodoPago: document.getElementById('cmpMetodoPago').value,
+    bancoRef: document.getElementById('cmpBancoRef').value.trim(),
+    comentarios: document.getElementById('cmpComentarios').value.trim(),
+    items: cmpItems.map(it => ({...it})),
+    total: Math.round(total * 100) / 100,
+    ingresadaAt: new Date().toISOString()
+  };
+
+  // Actualizar inventario: sumar stock y actualizar costo/pvp
+  cmpItems.forEach(it => {
+    // Sumar stock
+    const stockActual = getStock(it.id);
+    conteos[it.id] = Math.round((stockActual + it.qty) * 1000) / 1000;
+
+    // Actualizar extras (costo y pvp)
+    if (!extras[it.id]) extras[it.id] = {};
+    if (it.costo > 0) extras[it.id].costo = it.costo;
+    if (it.pvp > 0) extras[it.id].pvp = it.pvp;
+    if (it.lote) extras[it.id].lote = it.lote;
+    if (it.fechaFab) extras[it.id].fechaFab = it.fechaFab;
+    if (it.fechaCad) extras[it.id].fechaCad = it.fechaCad;
+  });
+
+  // Guardar en historial de compras (dentro de factData)
+  if (!compras) compras = [];
+  compras.unshift(compra);
+
+  // Agregar proveedor a lista si es nuevo
+  if (!proveedores.includes(proveedor)) proveedores.push(proveedor);
+
+  // Guardar todo
+  saveAll();
+  showToast('✅ Compra ingresada — stock actualizado para ' + cmpItems.length + ' producto(s)', 'ok');
+  cerrarCompra();
+}
+
+// Cerrar resultados al click fuera
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#cmpProdSearch') && !e.target.closest('#cmpProdResults')) {
+    const r = document.getElementById('cmpProdResults');
+    if (r) r.style.display = 'none';
+  }
+});
+
+// Actualizar vencimiento cuando cambia la fecha o días
+document.getElementById('cmpFecha').addEventListener('change', function() {
+  if (document.getElementById('cmpEstadoPago').value === 'credito') calcVencCmp();
+});
+document.getElementById('cmpDiasCredito').addEventListener('change', calcVencCmp);
 </script>
 </body>
 </html>
