@@ -157,8 +157,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
 .doc-header-info strong{font-size:14px;color:#1a56db;display:block}
 
 </style>
-<script src="auth-guard.js"></script>
-<script src="firebase-sync.js"></script>
+<script src="auth-guard.js?v=2"></script>
+<script src="firebase-sync.js?v=3"></script>
 </head>
 <body>
 
@@ -249,7 +249,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <select id="vTipoDoc"><option value="">Todos</option><option value="nota">Nota Venta</option>
       <option value="factura">Factura</option><option value="cotizacion">Cotización</option></select>
     <label>Estado</label>
-    <select id="vEstado"><option value="">Todos</option><option value="EMITIDA">Emitida</option><option value="ANULADA">Anulada</option></select>
+    <select id="vEstado"><option value="">Todos</option><option value="EMITIDA">Emitida</option><option value="APROBADA">Aprobada</option><option value="FACTURADA">Facturada</option><option value="CONVERTIDA">Convertida</option><option value="ANULADA">Anulada</option></select>
     <button class="btn btn-pri btn-sm" onclick="filtrarVentas()">🔍 Filtrar</button>
     <button class="btn btn-success btn-sm" onclick="exportVentasCSV()">⬇ CSV</button>
     <button class="btn btn-w btn-sm" style="border:1px solid var(--border)" onclick="window.print()">🖨 Imprimir</button>
@@ -479,7 +479,17 @@ function getCredentials(){
   return[master];
 }
 let currentSession=null;
-function checkSession(){return false;}
+const SESSION_KEY='bxd_session_v1';
+function checkSession(){
+  const raw=sessionStorage.getItem(SESSION_KEY)||localStorage.getItem(SESSION_KEY);
+  if(!raw)return false;
+  try{
+    const s=JSON.parse(raw);
+    if(Date.now()-s.ts>30*24*60*60*1000){localStorage.removeItem(SESSION_KEY);return false;}
+    currentSession={user:s.user,nombre:s.name,role:s.role};
+    return true;
+  }catch(e){return false;}
+}
 function doLogin(){
   const user=document.getElementById('loginUser').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
@@ -490,7 +500,12 @@ function doLogin(){
   document.getElementById('loginOverlay').classList.add('hidden');
   initApp();
 }
-function logout(){document.getElementById('loginOverlay').classList.remove('hidden');currentSession=null;}
+function logout(){
+  if(window.BXD_FB&&BXD_FB.signOut)BXD_FB.signOut();
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+  window.location.href='index.html';
+}
 
 // ── PERSISTENCE ─────────────────────────────────────────
 function lsOk(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t');return true}catch(e){return false}}
@@ -498,7 +513,8 @@ function loadAll(){
   try{let r=localStorage.getItem(SK_INV);if(r){const d=JSON.parse(r);conteos=d.conteos||{};extras=d.extras||{};
     customProducts=d.customProducts||[];proveedores=d.proveedores||[];}}catch(e){}
   try{let r=localStorage.getItem(SK_FACT);if(r){const d=JSON.parse(r);facturas=d.facturas||[];
-    nextFactura=d.nextFactura||1;clientes=d.clientes||[];taxPct=d.taxPct||15;}}catch(e){}
+    nextFactura=d.nextFactura||1;clientes=d.clientes||[];taxPct=d.taxPct||15;
+    if(d.compras&&d.compras.length)comprasFactura=d.compras;}}catch(e){}
   try{let r=localStorage.getItem(SK_RPT);if(r){const d=JSON.parse(r);notasCD=d.notasCD||[];
     remisiones=d.remisiones||[];pagosRecibidos=d.pagosRecibidos||[];
     nextNotaCD=d.nextNotaCD||1;nextRemision=d.nextRemision||1;nextPago=d.nextPago||1;
@@ -541,7 +557,9 @@ function initApp(){
     });
     BXD_FB.load(SK_FACT,function(d){
       if(d.facturas)facturas=d.facturas;if(d.nextFactura)nextFactura=d.nextFactura;
-      if(d.clientes)clientes=d.clientes;switchTab('dashboard');
+      if(d.clientes)clientes=d.clientes;
+      if(d.compras&&d.compras.length)comprasFactura=d.compras;
+      switchTab('dashboard');
     });
     BXD_FB.load(SK_INV,function(d){
       if(d.conteos)conteos=d.conteos;if(d.extras)extras=d.extras;
@@ -885,7 +903,8 @@ function renderPagos(){
 // ═══════════════════════════════════════════════════════════
 // COMPRAS / GASTOS
 // ═══════════════════════════════════════════════════════════
-let compras = [];
+let compras = [];          // gastos simples (registrados directo en Reportes)
+let comprasFactura = [];   // compras detalladas de proveedores (desde Ingresar Compra)
 let nextCompra = 1;
 
 function calcCompTotal() {
@@ -920,7 +939,17 @@ function renderCompras() {
   const desde = document.getElementById('compFDesde')?.value || '';
   const hasta = document.getElementById('compFHasta')?.value || '';
   const cat = document.getElementById('compFiltCat')?.value || '';
-  let filtered = compras.filter(c => {
+
+  // ── Compras de inventario (desde Ingresar Compra en Facturación) ──
+  const filtFact = comprasFactura.filter(c => {
+    if (desde && c.fecha < desde) return false;
+    if (hasta && c.fecha > hasta) return false;
+    return true;
+  });
+  const totalFact = filtFact.reduce((s, c) => s + (c.total || 0), 0);
+
+  // ── Gastos simples (registrados directamente en Reportes) ──
+  const filtered = compras.filter(c => {
     if (desde && c.fecha < desde) return false;
     if (hasta && c.fecha > hasta) return false;
     if (cat && c.categoria !== cat) return false;
@@ -929,32 +958,70 @@ function renderCompras() {
   const totalC = filtered.reduce((s, c) => s + c.total, 0);
   const totalSub = filtered.reduce((s, c) => s + c.subtotal, 0);
   const totalTax = filtered.reduce((s, c) => s + c.tax, 0);
+
   const catLabels = { mercaderia:'📦 Mercadería', insumos:'🧴 Insumos', servicios:'⚡ Servicios',
     alquiler:'🏠 Alquiler', transporte:'🚚 Transporte', marketing:'📢 Marketing',
     sueldos:'👥 Sueldos', impuestos:'🏛 Impuestos', mantenimiento:'🔧 Mantenimiento', otros:'📋 Otros' };
-  // KPIs
+
+  // ── KPIs ──
   const byCat = {};
   filtered.forEach(c => { byCat[c.categoria] = (byCat[c.categoria] || 0) + c.total; });
-  let kpi = `<div class="kpi red"><div class="kpi-label">Total Gastos</div><div class="kpi-val">${fmtCur(totalC)}</div>
-    <div class="kpi-sub">${filtered.length} compras</div></div>
-    <div class="kpi blue"><div class="kpi-label">Subtotal</div><div class="kpi-val">${fmtCur(totalSub)}</div></div>
-    <div class="kpi yellow"><div class="kpi-label">IVA Pagado</div><div class="kpi-val">${fmtCur(totalTax)}</div></div>`;
-  // Top category
+  const grandTotal = totalFact + totalC;
+  let kpi = `
+    <div class="kpi red"><div class="kpi-label">Total Compras Proveedor</div><div class="kpi-val">${fmtCur(totalFact)}</div>
+      <div class="kpi-sub">${filtFact.length} facturas de compra</div></div>
+    <div class="kpi orange"><div class="kpi-label">Total Otros Gastos</div><div class="kpi-val">${fmtCur(totalC)}</div>
+      <div class="kpi-sub">${filtered.length} gastos</div></div>
+    <div class="kpi red"><div class="kpi-label">Gran Total Egresos</div><div class="kpi-val">${fmtCur(grandTotal)}</div></div>`;
   const topCat = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
-  if (topCat) kpi += `<div class="kpi orange"><div class="kpi-label">Mayor Gasto</div><div class="kpi-val">${fmtCur(topCat[1])}</div>
+  if (topCat) kpi += `<div class="kpi yellow"><div class="kpi-label">Mayor Gasto</div><div class="kpi-val">${fmtCur(topCat[1])}</div>
     <div class="kpi-sub">${catLabels[topCat[0]] || topCat[0]}</div></div>`;
   document.getElementById('comprasKPI').innerHTML = kpi;
-  // Table
-  let html = '<table class="rpt-table"><thead><tr><th>Nº</th><th>Fecha</th><th>Proveedor</th><th>Fact.</th><th>Categoría</th><th class="r">Subtotal</th><th class="r">IVA</th><th class="r">Total</th><th>Método</th><th>Detalle</th></tr></thead><tbody>';
-  filtered.forEach(c => {
-    html += `<tr><td class="bold">CP-${fmtNum(c.id)}</td><td>${c.fecha}</td><td>${escH(c.proveedor)}</td>
-      <td>${escH(c.factNum)}</td><td>${catLabels[c.categoria]||c.categoria}</td>
-      <td class="r">${fmtCur(c.subtotal)}</td><td class="r">${fmtCur(c.tax)}</td>
-      <td class="r bold" style="color:var(--red)">${fmtCur(c.total)}</td>
-      <td>${c.metodo}</td><td>${escH(c.desc)}</td></tr>`;
-  });
-  html += `<tr class="total-row"><td colspan="5">TOTAL</td><td class="r">${fmtCur(totalSub)}</td>
-    <td class="r">${fmtCur(totalTax)}</td><td class="r">${fmtCur(totalC)}</td><td colspan="2"></td></tr></tbody></table>`;
+
+  let html = '';
+
+  // ── Tabla 1: Compras de Inventario (Ingresar Compra) ──
+  html += '<h3 style="margin:16px 0 8px;font-size:14px;color:var(--text)">📦 Compras de Inventario (Facturas de Proveedor)</h3>';
+  if (filtFact.length === 0) {
+    html += '<div style="padding:16px;color:var(--muted);background:#fff;border-radius:8px;box-shadow:var(--sh)">No hay compras de inventario en el período seleccionado.</div>';
+  } else {
+    html += '<table class="rpt-table"><thead><tr><th>Fecha</th><th>Proveedor</th><th>Nº Fact.</th><th>Responsable</th><th>Estado Pago</th><th>Método</th><th>Productos</th><th class="r">Total</th></tr></thead><tbody>';
+    filtFact.forEach(c => {
+      const estadoColor = c.estadoPago === 'credito' ? 'var(--yellow)' : 'var(--green)';
+      const estadoTxt = c.estadoPago === 'credito' ? `⏳ Crédito ${c.diasCredito||''}d` : '✅ Cancelada';
+      const nProd = (c.items||[]).length;
+      const prods = (c.items||[]).slice(0,3).map(it=>escH(it.nombre||it.prodNombre||'')).join(', ');
+      const prodsLabel = nProd > 3 ? prods + ` y ${nProd-3} más...` : prods;
+      html += `<tr>
+        <td>${c.fecha}</td>
+        <td class="bold">${escH(c.proveedor)}</td>
+        <td>${escH(c.numFactProv||'')}</td>
+        <td>${escH(c.responsable||'')}</td>
+        <td style="color:${estadoColor};font-weight:700">${estadoTxt}</td>
+        <td>${escH(c.metodoPago||c.metodopago||'')}</td>
+        <td style="font-size:11px;color:var(--muted)">${prodsLabel}</td>
+        <td class="r bold" style="color:var(--red)">${fmtCur(c.total||0)}</td></tr>`;
+    });
+    html += `<tr class="total-row"><td colspan="7">TOTAL COMPRAS INVENTARIO</td><td class="r">${fmtCur(totalFact)}</td></tr></tbody></table>`;
+  }
+
+  // ── Tabla 2: Otros Gastos ──
+  html += '<h3 style="margin:20px 0 8px;font-size:14px;color:var(--text)">💳 Otros Gastos y Egresos</h3>';
+  if (filtered.length === 0) {
+    html += '<div style="padding:16px;color:var(--muted);background:#fff;border-radius:8px;box-shadow:var(--sh)">No hay gastos registrados en el período seleccionado.</div>';
+  } else {
+    html += '<table class="rpt-table"><thead><tr><th>Nº</th><th>Fecha</th><th>Proveedor</th><th>Fact.</th><th>Categoría</th><th class="r">Subtotal</th><th class="r">IVA</th><th class="r">Total</th><th>Método</th><th>Detalle</th></tr></thead><tbody>';
+    filtered.forEach(c => {
+      html += `<tr><td class="bold">CP-${fmtNum(c.id)}</td><td>${c.fecha}</td><td>${escH(c.proveedor)}</td>
+        <td>${escH(c.factNum)}</td><td>${catLabels[c.categoria]||c.categoria}</td>
+        <td class="r">${fmtCur(c.subtotal)}</td><td class="r">${fmtCur(c.tax)}</td>
+        <td class="r bold" style="color:var(--red)">${fmtCur(c.total)}</td>
+        <td>${c.metodo}</td><td>${escH(c.desc)}</td></tr>`;
+    });
+    html += `<tr class="total-row"><td colspan="5">TOTAL GASTOS</td><td class="r">${fmtCur(totalSub)}</td>
+      <td class="r">${fmtCur(totalTax)}</td><td class="r">${fmtCur(totalC)}</td><td colspan="2"></td></tr></tbody></table>`;
+  }
+
   document.getElementById('comprasTableWrap').innerHTML = html;
   // Balance
   renderBalance(desde, hasta);
@@ -975,7 +1042,13 @@ function renderBalance(desde, hasta) {
     if (cat && c.categoria !== cat) return false;
     return true;
   });
-  const totalGastos = activeC.reduce((s, c) => s + c.total, 0);
+  const activeCF = comprasFactura.filter(c => {
+    if (desde && c.fecha < desde) return false;
+    if (hasta && c.fecha > hasta) return false;
+    return true;
+  });
+  const totalGastos = activeC.reduce((s, c) => s + c.total, 0) +
+                      activeCF.reduce((s, c) => s + (c.total || 0), 0);
   const utilidad = totalIngresos - totalGastos;
   const margen = totalIngresos > 0 ? (utilidad / totalIngresos * 100).toFixed(1) : 0;
   document.getElementById('balanceKPI').innerHTML = `
@@ -988,6 +1061,7 @@ function renderBalance(desde, hasta) {
   const yr = new Date().getFullYear();
   activeF.filter(f => f.fecha?.startsWith(String(yr))).forEach(f => { months[parseInt(f.fecha.slice(5, 7)) - 1].ing += f.total; });
   compras.filter(c => c.fecha?.startsWith(String(yr))).forEach(c => { months[parseInt(c.fecha.slice(5, 7)) - 1].gas += c.total; });
+  comprasFactura.filter(c => c.fecha?.startsWith(String(yr))).forEach(c => { months[parseInt(c.fecha.slice(5, 7)) - 1].gas += (c.total||0); });
   destroyChart('chartBalance');
   charts.chartBalance = new Chart(document.getElementById('chartBalance'), {
     type: 'bar', data: { labels: months.map((_, i) => monthName(i)),
@@ -1194,6 +1268,16 @@ function toast(msg,type=''){const t=document.getElementById('toast');t.textConte
 document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus();});
+
+// ── AUTO-INICIO: si hay sesión activa del sistema principal, cargar datos ──
+(function(){
+  if(checkSession()){
+    initApp();
+  } else {
+    // Si auth-guard no redirigió, mostrar login de respaldo
+    document.getElementById('loginOverlay').classList.remove('hidden');
+  }
+})();
 </script>
 </body>
 </html>
