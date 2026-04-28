@@ -876,24 +876,79 @@ function registrarPago(){
 function renderPagos(){
   const desde=document.getElementById('pagoFDesde').value;
   const hasta=document.getElementById('pagoFHasta').value;
-  let filtered=pagosRecibidos.filter(p=>{
+
+  // ── Créditos pendientes de cobro (desde Facturación) ──
+  const hoy=today();
+  const creditosFact=facturas.filter(f=>
+    f.estado!=='ANULADA' && f.pago && f.pago.metodo==='credito'
+  ).sort((a,b)=>(a.pago.vencimiento||'')>(b.pago.vencimiento||'')?1:-1);
+
+  const totalCredPend=creditosFact.reduce((s,f)=>s+(f.total||0),0);
+  const vencidos=creditosFact.filter(f=>f.pago.vencimiento&&f.pago.vencimiento<hoy);
+  const proximosDias=5;
+  const proxFecha=new Date();proxFecha.setDate(proxFecha.getDate()+proximosDias);
+  const proxStr=proxFecha.toISOString().split('T')[0];
+  const proximos=creditosFact.filter(f=>f.pago.vencimiento&&f.pago.vencimiento>=hoy&&f.pago.vencimiento<=proxStr);
+
+  // ── Pagos manuales registrados ──
+  let filtPagos=pagosRecibidos.filter(p=>{
     if(desde&&p.fecha<desde)return false;if(hasta&&p.fecha>hasta)return false;return true;});
-  const totalP=filtered.reduce((s,p)=>s+p.monto,0);
-  const byMethod={};filtered.forEach(p=>{byMethod[p.metodo]=(byMethod[p.metodo]||0)+p.monto;});
+  const totalP=filtPagos.reduce((s,p)=>s+p.monto,0);
+  const byMethod={};filtPagos.forEach(p=>{byMethod[p.metodo]=(byMethod[p.metodo]||0)+p.monto;});
   const metLabels={efectivo:'💵 Efectivo',transferencia:'🏦 Transferencia',tarjeta:'💳 Tarjeta',cheque:'📄 Cheque'};
-  let kpi=`<div class="kpi green"><div class="kpi-label">Total Recibido</div><div class="kpi-val">${fmtCur(totalP)}</div>
-    <div class="kpi-sub">${filtered.length} pagos</div></div>`;
+
+  // ── KPIs ──
+  let kpi=`
+    <div class="kpi ${vencidos.length>0?'red':'orange'}"><div class="kpi-label">Créditos Pendientes</div><div class="kpi-val">${fmtCur(totalCredPend)}</div>
+      <div class="kpi-sub">${creditosFact.length} facturas · ${vencidos.length} vencidas</div></div>
+    <div class="kpi green"><div class="kpi-label">Pagos Registrados</div><div class="kpi-val">${fmtCur(totalP)}</div>
+      <div class="kpi-sub">${filtPagos.length} pagos cobrados</div></div>`;
   Object.entries(byMethod).forEach(([m,v])=>{
     kpi+=`<div class="kpi blue"><div class="kpi-label">${metLabels[m]||m}</div><div class="kpi-val">${fmtCur(v)}</div></div>`;});
   document.getElementById('pagosKPI').innerHTML=kpi;
+
   const wrap=document.getElementById('pagosTableWrap');
-  if(filtered.length===0){wrap.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">No hay pagos registrados</div>';return;}
-  let html='<table class="rpt-table"><thead><tr><th>Nº</th><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Método</th><th>Referencia</th><th class="r">Monto</th><th>Obs.</th></tr></thead><tbody>';
-  filtered.forEach(p=>{
-    html+=`<tr><td class="bold">PG-${fmtNum(p.id)}</td><td>${p.fecha}</td><td>${fmtNum(p.factNum)}</td>
-      <td>${escH(p.cliente)}</td><td>${metLabels[p.metodo]||p.metodo}</td><td>${escH(p.ref)}</td>
-      <td class="r bold" style="color:var(--green)">${fmtCur(p.monto)}</td><td>${escH(p.obs)}</td></tr>`;});
-  html+=`<tr class="total-row"><td colspan="6">TOTAL</td><td class="r">${fmtCur(totalP)}</td><td></td></tr></tbody></table>`;
+  let html='';
+
+  // ── Tabla 1: Créditos pendientes de cobro ──
+  html+='<h3 style="margin:0 0 8px;font-size:14px;color:var(--text)">⏳ Créditos Pendientes de Cobro (desde Ventas)</h3>';
+  if(creditosFact.length===0){
+    html+='<div style="padding:14px;color:var(--muted);background:#fff;border-radius:8px;box-shadow:var(--sh);margin-bottom:16px">No hay ventas a crédito pendientes.</div>';
+  }else{
+    html+='<table class="rpt-table"><thead><tr><th>Nº Doc.</th><th>Fecha Venta</th><th>Cliente</th><th>Plazo</th><th>Vencimiento</th><th class="r">Total</th><th>Estado</th></tr></thead><tbody>';
+    creditosFact.forEach(f=>{
+      const pfx=f.tipoDocPrefix||'NV';
+      const venc=f.pago.vencimiento||'—';
+      const estaVencida=venc!=='—'&&venc<hoy;
+      const estaProxima=!estaVencida&&venc!=='—'&&venc<=proxStr;
+      let estadoColor=estaVencida?'var(--red)':estaProxima?'var(--yellow)':'var(--green)';
+      let estadoTxt=estaVencida?'🔴 VENCIDA':estaProxima?'🟡 PRÓXIMA':'🟢 Al día';
+      html+=`<tr style="${estaVencida?'background:#fff5f5':''}">
+        <td class="bold">${pfx}-${fmtNum(f.numero)}</td>
+        <td>${f.fecha}</td>
+        <td>${escH(f.cliente?.nombre||'')}</td>
+        <td>${f.pago.plazo||'—'} días</td>
+        <td style="font-weight:700;color:${estadoColor}">${venc}</td>
+        <td class="r bold">${fmtCur(f.total||0)}</td>
+        <td style="font-weight:700;color:${estadoColor}">${estadoTxt}</td></tr>`;
+    });
+    const totalVenc=vencidos.reduce((s,f)=>s+(f.total||0),0);
+    html+=`<tr class="total-row"><td colspan="5">TOTAL PENDIENTE</td><td class="r">${fmtCur(totalCredPend)}</td>
+      <td style="color:var(--red)">${vencidos.length>0?'⚠️ Vencido: '+fmtCur(totalVenc):''}</td></tr></tbody></table>`;
+  }
+
+  // ── Tabla 2: Pagos manuales registrados ──
+  html+='<h3 style="margin:20px 0 8px;font-size:14px;color:var(--text)">✅ Pagos Cobrados (Historial Manual)</h3>';
+  if(filtPagos.length===0){
+    html+='<div style="padding:14px;color:var(--muted);background:#fff;border-radius:8px;box-shadow:var(--sh)">No hay pagos registrados en el período seleccionado.</div>';
+  }else{
+    html+='<table class="rpt-table"><thead><tr><th>Nº</th><th>Fecha</th><th>Factura</th><th>Cliente</th><th>Método</th><th>Referencia</th><th class="r">Monto</th><th>Obs.</th></tr></thead><tbody>';
+    filtPagos.forEach(p=>{
+      html+=`<tr><td class="bold">PG-${fmtNum(p.id)}</td><td>${p.fecha}</td><td>${fmtNum(p.factNum)}</td>
+        <td>${escH(p.cliente)}</td><td>${metLabels[p.metodo]||p.metodo}</td><td>${escH(p.ref)}</td>
+        <td class="r bold" style="color:var(--green)">${fmtCur(p.monto)}</td><td>${escH(p.obs)}</td></tr>`;});
+    html+=`<tr class="total-row"><td colspan="6">TOTAL</td><td class="r">${fmtCur(totalP)}</td><td></td></tr></tbody></table>`;
+  }
   wrap.innerHTML=html;
 }
 
