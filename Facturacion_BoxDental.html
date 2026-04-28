@@ -2056,6 +2056,15 @@ function init() {
   });
 
   window.addEventListener('beforeunload', saveAll);
+
+  // ── AUTO-GUARDADO en campos del cliente ──────────────────
+  ['cliNombre','cliRuc','cliTelefono','cliDireccion','cliCiudad','cliEmail'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', autoGuardar);
+  });
+
+  // Auto-guardado cada 30 segundos como respaldo adicional
+  setInterval(saveAll, 30000);
 }
 
 // ── PERSISTENCE ─────────────────────────────────────────
@@ -2114,7 +2123,15 @@ function saveFactData() {
   try { if(lsOk()) localStorage.setItem(SK_FACT, str); sessionStorage.setItem(SK_FACT, str); } catch(e){}
 }
 
+let _autoSaveTimer = null;
+function autoGuardar() {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  setSaving(true);
+  _autoSaveTimer = setTimeout(saveAll, 1500);
+}
+
 function saveAll() {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
   saveInvData();
   saveFactData();
   // Sync to Firebase
@@ -2125,7 +2142,7 @@ function saveAll() {
     BXD_FB.save(SK_FACT, factData);
   }
   setSaving(false);
-  document.getElementById('lastSaved').textContent = 'Guardado: ' + new Date().toLocaleTimeString('es-EC');
+  document.getElementById('lastSaved').textContent = 'Auto-guardado: ' + new Date().toLocaleTimeString('es-EC');
 }
 
 function setSaving(v) {
@@ -2166,12 +2183,14 @@ function addItem(id) {
   }
   renderItems();
   recalcTotals();
+  autoGuardar();
 }
 
 function removeItem(idx) {
   currentItems.splice(idx, 1);
   renderItems();
   recalcTotals();
+  autoGuardar();
 }
 
 function updateItemQty(idx, val) {
@@ -2181,6 +2200,7 @@ function updateItemQty(idx, val) {
   currentItems[idx].total = n * (currentItems[idx].precioUnit - (currentItems[idx].descUnit || 0));
   renderItems();
   recalcTotals();
+  autoGuardar();
 }
 
 function updateItemPrice(idx, val) {
@@ -2190,6 +2210,7 @@ function updateItemPrice(idx, val) {
   currentItems[idx].total = currentItems[idx].qty * (n - (currentItems[idx].descUnit || 0));
   renderItems();
   recalcTotals();
+  autoGuardar();
 }
 
 function updateItemDisc(idx, val) {
@@ -2200,6 +2221,7 @@ function updateItemDisc(idx, val) {
   it.total = it.qty * (it.precioUnit - it.descUnit);
   renderItems();
   recalcTotals();
+  autoGuardar();
 }
 
 // ── RENDER ITEMS ────────────────────────────────────────
