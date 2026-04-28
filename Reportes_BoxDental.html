@@ -246,8 +246,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--te
     <label>Desde</label><input type="date" id="vFechaDesde">
     <label>Hasta</label><input type="date" id="vFechaHasta">
     <label>Tipo</label>
-    <select id="vTipoDoc"><option value="">Todos</option><option value="nota">Nota Venta</option>
-      <option value="factura">Factura</option><option value="cotizacion">Cotización</option></select>
+    <select id="vTipoDoc"><option value="">Todos (sin NC/ND)</option><option value="nota">Nota Venta</option>
+      <option value="factura">Factura</option><option value="cotizacion">Cotización</option>
+      <option value="nota_credito">Notas de Crédito</option><option value="nota_debito">Notas de Débito</option></select>
     <label>Estado</label>
     <select id="vEstado"><option value="">Todos</option><option value="EMITIDA">Emitida</option><option value="APROBADA">Aprobada</option><option value="FACTURADA">Facturada</option><option value="CONVERTIDA">Convertida</option><option value="ANULADA">Anulada</option></select>
     <button class="btn btn-pri btn-sm" onclick="filtrarVentas()">🔍 Filtrar</button>
@@ -690,6 +691,8 @@ function filtrarVentas(){
   const tipo=document.getElementById('vTipoDoc').value;
   const estado=document.getElementById('vEstado').value;
   let filtered=facturas.filter(f=>{
+    // Excluir NC/ND del reporte de ventas (tienen su propia sección)
+    if(!tipo && (f.tipoDoc==='nota_credito'||f.tipoDoc==='nota_debito')) return false;
     if(desde&&f.fecha<desde)return false;if(hasta&&f.fecha>hasta)return false;
     if(tipo&&(f.tipoDoc||'nota')!==tipo)return false;
     if(estado&&f.estado!==estado)return false;return true;});
@@ -707,7 +710,7 @@ function filtrarVentas(){
   let html='<table class="rpt-table"><thead><tr><th>Nº</th><th>Tipo</th><th>Fecha</th><th>Cliente</th><th>RUC</th><th class="r">Subtotal</th><th class="r">Desc.</th><th class="r">IVA</th><th class="r">Total</th><th class="c">Estado</th></tr></thead><tbody>';
   filtered.forEach(f=>{
     const pfx=f.tipoDocPrefix||'NV';const tl=f.tipoDocLabel||'NOTA DE VENTA';
-    const badgeCls=pfx==='FA'?'badge-fa':pfx==='CT'?'badge-ct':'badge-nv';
+    const badgeCls=pfx==='NC'?'badge-nc':pfx==='ND'?'badge-nd':pfx==='FA'?'badge-fa':pfx==='CT'?'badge-ct':'badge-nv';
     const stBadge=f.estado==='ANULADA'?'badge-cancel':'badge-ok';
     html+=`<tr><td class="bold">${pfx}-${fmtNum(f.numero)}</td><td><span class="badge ${badgeCls}">${tl}</span></td>
       <td>${f.fecha}</td><td>${escH(f.cliente?.nombre||'')}</td><td>${escH(f.cliente?.ruc||'')}</td>
