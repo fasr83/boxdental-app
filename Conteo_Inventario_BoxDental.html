@@ -159,6 +159,44 @@ td{padding:6px 10px;vertical-align:middle}
 .ventas-hist .total-row{background:#eff6ff;font-weight:700}
 .ventas-hist .sin-ventas{color:var(--muted);font-size:12px;padding:12px;text-align:center}
 
+/* ── INVENTARIO BLOQUEADO (solo lectura) ── */
+.inv-locked-banner{background:#fef9c3;border-bottom:2px solid #fbbf24;padding:8px 20px;
+  font-size:12px;font-weight:700;color:#92400e;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.inv-locked-banner button{background:#fff;border:1.5px solid #fbbf24;color:#92400e;
+  padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.inv-locked-banner button:hover{background:#fef3c7}
+.qty-locked{pointer-events:none;opacity:.5}
+
+/* ── MODAL PIN ADMIN ── */
+.pin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;
+  display:none;align-items:center;justify-content:center}
+.pin-overlay.open{display:flex}
+.pin-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.pin-box h3{font-size:16px;font-weight:800;color:#1f2937;margin-bottom:6px}
+.pin-box p{font-size:13px;color:#6b7280;margin-bottom:16px}
+.pin-input{width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:8px;
+  font-size:18px;font-weight:700;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px}
+.pin-input:focus{border-color:#4f46e5}
+.pin-err{color:#dc2626;font-size:12px;font-weight:700;min-height:18px;margin-bottom:8px}
+.pin-btns{display:flex;gap:8px}
+.pin-btns button{flex:1;padding:10px;border-radius:8px;border:none;font-size:14px;font-weight:700;cursor:pointer}
+
+/* ── CALENDARIO CADUCIDADES ── */
+.cad-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;
+  display:flex;align-items:center;gap:12px;font-size:13px}
+.cad-card.exp{background:#fef2f2;border-color:#fca5a5}
+.cad-card.warn30{background:#fff7ed;border-color:#fdba74}
+.cad-card.warn90{background:#fefce8;border-color:#fde68a}
+.cad-card.ok{background:#f0fdf4;border-color:#86efac}
+.cad-badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap}
+.cad-badge.exp{background:#fee2e2;color:#991b1b}
+.cad-badge.warn30{background:#ffedd5;color:#9a3412}
+.cad-badge.warn90{background:#fef9c3;color:#854d0e}
+.cad-badge.ok{background:#dcfce7;color:#166534}
+.cad-name{font-weight:700;flex:1;color:#111827}
+.cad-meta{font-size:11px;color:#6b7280}
+.cad-dias{font-weight:800;font-size:13px;min-width:90px;text-align:right}
+
 /* ── HISTORIAL COMPRAS ── */
 .cmp-hist{margin-top:16px;border-top:2px solid #e0e7ff;padding-top:14px}
 .cmp-hist h3{font-size:14px;margin-bottom:10px;color:#4f46e5;display:flex;align-items:center;gap:6px}
@@ -334,6 +372,28 @@ td{padding:6px 10px;vertical-align:middle}
 </div>
 
 <!-- MODAL GESTIÓN DE USUARIOS -->
+<!-- BANNER MODO SOLO LECTURA -->
+<div class="inv-locked-banner" id="invLockedBanner" style="display:none">
+  🔒 Modo solo lectura — El inventario está protegido.
+  <button onclick="pedirPinAdmin()">🔑 Desbloquear como Admin</button>
+  <span id="invUnlockLabel" style="color:#059669;display:none">✅ Desbloqueado</span>
+</div>
+
+<!-- MODAL PIN ADMIN -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <h3>🔑 Acceso Administrador</h3>
+    <p>Ingresa la contraseña de administrador para editar el inventario</p>
+    <input type="password" class="pin-input" id="pinInput" placeholder="••••••" maxlength="20"
+      onkeydown="if(event.key==='Enter')verificarPin()">
+    <div class="pin-err" id="pinErr"></div>
+    <div class="pin-btns">
+      <button onclick="cerrarPin()" style="background:#f3f4f6;color:#374151">Cancelar</button>
+      <button onclick="verificarPin()" style="background:#4f46e5;color:#fff">Desbloquear</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modalUsuarios">
 <div class="modal" style="max-width:520px">
   <h2>👥 Gestión de Usuarios</h2>
@@ -447,6 +507,7 @@ td{padding:6px 10px;vertical-align:middle}
   <button class="tbtn" id="btnCount" onclick="toggleFiltro('count')">Ya contados</button>
   <button class="tbtn warn" id="btnBajo" onclick="toggleFiltro('bajo')">⚠ Bajo stock</button>
   <button class="tbtn" id="btnProv" onclick="toggleProvPanel()">🏢 Proveedores</button>
+  <button class="tbtn" id="btnCad" onclick="toggleCaducidades()" style="background:#f0fdf4;color:#065f46;border-color:#6ee7b7">📅 Caducidades</button>
 </div>
 
 <!-- PROVEEDORES PANEL -->
@@ -454,6 +515,20 @@ td{padding:6px 10px;vertical-align:middle}
   <strong style="font-size:12px;color:var(--muted)">PROVEEDORES:</strong>
   <div id="provTags"></div>
   <button class="btn btn-w btn-sm" onclick="openAddProv()">+ Agregar</button>
+</div>
+
+<!-- PANEL CADUCIDADES -->
+<div id="panelCaducidades" style="display:none;background:#fff;border-bottom:2px solid #d1fae5;padding:16px 20px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <strong style="font-size:15px;color:#065f46">📅 Control de Fechas de Caducidad</strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700" id="cadCntExp">0 vencidos</span>
+      <span style="background:#ffedd5;color:#9a3412;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700" id="cadCnt30">0 en 30 días</span>
+      <span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700" id="cadCnt90">0 en 90 días</span>
+      <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700" id="cadCntOk">0 vigentes</span>
+    </div>
+  </div>
+  <div id="caducidadesBody" style="display:grid;gap:8px"></div>
 </div>
 
 <!-- HINT BAR -->
@@ -540,8 +615,8 @@ td{padding:6px 10px;vertical-align:middle}
   <div class="cmp-hist" id="detalleCompras"></div>
 
   <div class="modal-footer">
-    <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeDetalle()">Cancelar</button>
-    <button class="btn btn-success" onclick="guardarDetalle()">💾 Guardar Cambios</button>
+    <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeDetalle()">Cerrar</button>
+    <button class="btn btn-success" id="btnGuardarDetalle" onclick="guardarDetalleConPermiso()">💾 Guardar Cambios</button>
   </div>
 </div>
 </div>
@@ -824,6 +899,166 @@ function getCurrentUser() {
   return null;
 }
 
+// ── ROLES Y PERMISOS ─────────────────────────────────────
+let invDesbloqueado = false;
+
+function getRole() {
+  // Primero intenta sesión global (bxd_session_v1)
+  try {
+    const raw = sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1');
+    if (raw) { const s = JSON.parse(raw); return s.role || 'vendedor'; }
+  } catch(e) {}
+  // Fallback: sesión local del inventario
+  if (currentSession) return currentSession.role || 'vendedor';
+  return 'vendedor';
+}
+
+function isAdmin() { return getRole() === 'admin'; }
+function canEditInventory() { return isAdmin() && invDesbloqueado; }
+
+function initRoleUI() {
+  const role = getRole();
+  // Establecer el nombre del usuario desde la sesión global
+  try {
+    const raw = sessionStorage.getItem('bxd_session_v1') || localStorage.getItem('bxd_session_v1');
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (!currentSession) currentSession = { user: s.user, role: s.role, nombre: s.name };
+    }
+  } catch(e) {}
+  showLoggedUser();
+
+  if (role === 'admin') {
+    // Admin: desbloqueado por defecto
+    invDesbloqueado = true;
+    document.getElementById('invLockedBanner').style.display = 'none';
+  } else {
+    // No-admin: mostrar banner de solo lectura
+    invDesbloqueado = false;
+    document.getElementById('invLockedBanner').style.display = 'flex';
+    // Ocultar botones de edición
+    applyReadOnlyMode();
+  }
+}
+
+function applyReadOnlyMode() {
+  // El render() aplica bloqueos en los elementos generados dinámicamente
+  // Los botones fijos también se deshabilitan
+  const btnsOcultar = ['btnNuevoProd'];
+  btnsOcultar.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+
+// ── PIN ADMIN ─────────────────────────────────────────────
+function pedirPinAdmin() {
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinErr').textContent = '';
+  document.getElementById('pinOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('pinInput').focus(), 100);
+}
+
+function cerrarPin() {
+  document.getElementById('pinOverlay').classList.remove('open');
+}
+
+function verificarPin() {
+  const pass = document.getElementById('pinInput').value;
+  // Verificar contra contraseña de admin en bxd_session_v1 o valor fijo
+  const ADMIN_PASSES = ['boxdental2026', 'bxd2026'];
+  if (ADMIN_PASSES.includes(pass)) {
+    invDesbloqueado = true;
+    cerrarPin();
+    document.getElementById('invLockedBanner').style.display = 'none';
+    document.getElementById('invUnlockLabel').style.display = 'inline';
+    // Restaurar botones
+    const btnNuevo = document.getElementById('btnNuevoProd');
+    if (btnNuevo) btnNuevo.style.display = '';
+    render(); // Re-renderizar con controles activos
+    toast('✅ Inventario desbloqueado', 'ok');
+  } else {
+    document.getElementById('pinErr').textContent = '❌ Contraseña incorrecta';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+// ── CALENDARIO CADUCIDADES ────────────────────────────────
+function toggleCaducidades() {
+  const panel = document.getElementById('panelCaducidades');
+  const btn = document.getElementById('btnCad');
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  btn.classList.toggle('active', !visible);
+  if (!visible) renderCaducidades();
+}
+
+function renderCaducidades() {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const d30  = new Date(hoy); d30.setDate(hoy.getDate() + 30);
+  const d90  = new Date(hoy); d90.setDate(hoy.getDate() + 90);
+
+  const todos = [...ALL_PRODUCTS, ...customProducts];
+  const items = [];
+
+  todos.forEach(p => {
+    const fechStr = getExtra(p.id, 'fechCad') || getExtra(p.id, 'fechaCad') || '';
+    if (!fechStr) return;
+    const fech = new Date(fechStr + 'T12:00:00');
+    if (isNaN(fech)) return;
+    const stock = getStock(p.id);
+    if (!stock || parseFloat(stock) <= 0) return; // sin stock no importa
+    const difMs = fech - hoy;
+    const dias  = Math.round(difMs / 86400000);
+    let grupo = 'ok';
+    if (dias < 0)   grupo = 'exp';
+    else if (dias <= 30) grupo = 'warn30';
+    else if (dias <= 90) grupo = 'warn90';
+    items.push({ p, nombre: getNombre(p.id), fecha: fechStr, dias, grupo, stock,
+      lote: getExtra(p.id,'lote') || '', prov: (getExtra(p.id,'proveedor')||[]).join(', ') });
+  });
+
+  // Ordenar: vencidos primero, luego por días asc
+  items.sort((a,b) => a.dias - b.dias);
+
+  // Contadores
+  const cntExp  = items.filter(i=>i.grupo==='exp').length;
+  const cnt30   = items.filter(i=>i.grupo==='warn30').length;
+  const cnt90   = items.filter(i=>i.grupo==='warn90').length;
+  const cntOk   = items.filter(i=>i.grupo==='ok').length;
+  document.getElementById('cadCntExp').textContent = cntExp + ' vencido' + (cntExp!==1?'s':'');
+  document.getElementById('cadCnt30').textContent  = cnt30  + ' en ≤30 días';
+  document.getElementById('cadCnt90').textContent  = cnt90  + ' en 31-90 días';
+  document.getElementById('cadCntOk').textContent  = cntOk  + ' vigente' + (cntOk!==1?'s':'');
+
+  const wrap = document.getElementById('caducidadesBody');
+  if (!items.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px">✅ No hay productos con fecha de caducidad registrada.</div>';
+    return;
+  }
+
+  const badgeLabels = {
+    exp:    txt => `<span class="cad-badge exp">🔴 Vencido hace ${Math.abs(txt)} día${Math.abs(txt)!==1?'s':''}</span>`,
+    warn30: txt => `<span class="cad-badge warn30">🟠 Vence en ${txt} día${txt!==1?'s':''}</span>`,
+    warn90: txt => `<span class="cad-badge warn90">🟡 Vence en ${txt} días</span>`,
+    ok:     txt => `<span class="cad-badge ok">🟢 Vence en ${txt} días</span>`,
+  };
+
+  wrap.innerHTML = items.map(it => {
+    const badge = badgeLabels[it.grupo](Math.abs(it.dias));
+    const fmtF  = new Date(it.fecha+'T12:00:00').toLocaleDateString('es-EC',{day:'2-digit',month:'long',year:'numeric'});
+    const meta  = [it.lote ? 'Lote: '+it.lote : '', it.prov ? it.prov : '', 'Stock: '+it.stock].filter(Boolean).join(' · ');
+    return `<div class="cad-card ${it.grupo}" onclick="openDetalle(${it.p.id})" style="cursor:pointer" title="Clic para editar">
+      <div style="flex:1">
+        <div class="cad-name">${escH(it.nombre)}</div>
+        <div class="cad-meta">${meta}</div>
+      </div>
+      <div style="text-align:right">
+        ${badge}
+        <div class="cad-meta" style="margin-top:4px">📅 ${fmtF}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function openUserSettings() {
   document.getElementById('modalUsuarios').classList.add('open');
   renderUserList();
@@ -1028,8 +1263,9 @@ function init() {
     document.getElementById('loginUser').focus();
     document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
     document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
-    // Still init but hidden
   }
+  // Aplicar permisos por rol
+  initRoleUI();
   loadData();
   buildCatFilter();
   render();
@@ -1262,15 +1498,16 @@ function render() {
             onfocus="this.select()">
         </td>
         <td class="c-qty">
-          <div class="qty-ctrl">
-            <button class="qty-btn minus" onclick="adjQty(${p.id},-1)" tabindex="-1">−</button>
+          <div class="qty-ctrl ${canEditInventory() ? '' : 'qty-locked'}">
+            <button class="qty-btn minus" onclick="adjQty(${p.id},-1)" tabindex="-1" ${canEditInventory() ? '' : 'disabled'}>−</button>
             <input type="number" min="0" step="1" class="qty-num ${counted ? 'has-val' : ''} ${low ? 'low' : ''}"
               id="qty-${p.id}" data-id="${p.id}" value="${qty !== null ? qty : ''}"
               placeholder="0"
               oninput="onQtyChange(this)"
               onkeydown="onKeyNav(event,${p.id})"
-              onfocus="this.select()">
-            <button class="qty-btn" onclick="adjQty(${p.id},1)" tabindex="-1">+</button>
+              onfocus="this.select()"
+              ${canEditInventory() ? '' : 'readonly'}>
+            <button class="qty-btn" onclick="adjQty(${p.id},1)" tabindex="-1" ${canEditInventory() ? '' : 'disabled'}>+</button>
           </div>
         </td>
         <td style="text-align:right;font-weight:600;font-size:13px">${total}</td>
@@ -1503,6 +1740,7 @@ function openDetalle(id) {
   // purchase history
   const purchases = getPurchaseHistory(id);
   renderPurchaseHistory(purchases);
+  actualizarModalPermisos();
   document.getElementById('modalDetalle').classList.add('open');
 }
 
@@ -1528,6 +1766,34 @@ function guardarDetalle() {
   closeDetalle();
   render(); updateStats(); saveData();
   toast('✅ Producto actualizado', 'ok');
+}
+
+function guardarDetalleConPermiso() {
+  if (!canEditInventory()) {
+    // Guardar solo precio y % (lo que el vendedor sí puede hacer)
+    const role = getRole();
+    if (role === 'vendedor') {
+      toast('🔒 Solo el admin puede modificar el inventario. Pide desbloqueo.', 'err');
+      pedirPinAdmin();
+      return;
+    }
+    pedirPinAdmin();
+    return;
+  }
+  guardarDetalle();
+}
+
+// Actualiza el modal para reflejar permisos
+function actualizarModalPermisos() {
+  const btnGuardar = document.getElementById('btnGuardarDetalle');
+  if (!btnGuardar) return;
+  if (!canEditInventory()) {
+    btnGuardar.textContent = '🔒 Requiere Admin';
+    btnGuardar.style.background = '#f59e0b';
+  } else {
+    btnGuardar.textContent = '💾 Guardar Cambios';
+    btnGuardar.style.background = '';
+  }
 }
 
 // ── PVP CALCULATION ─────────────────────────────────────

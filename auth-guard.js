@@ -1,7 +1,8 @@
-// ═══ BoxDental Auth Guard ═══
-// Include this script in any page to protect it with login
-// If no valid session exists, redirects to index.html (login page)
-// Also checks role-based permissions for restricted pages
+// ═══ BoxDental Auth Guard v2 ═══
+// Protege páginas por sesión y rol
+// admin    → acceso total
+// subadmin → todo menos Planificador
+// vendedor → Facturacion, Caja, Inventario (lectura), Chat
 
 (function() {
   const SESSION_KEY = 'bxd_session_v1';
@@ -14,7 +15,8 @@
 
   try {
     const s = JSON.parse(raw);
-    // Session expires after 30 days
+
+    // Sesión válida por 30 días
     if (Date.now() - s.ts > 30 * 24 * 60 * 60 * 1000) {
       localStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(SESSION_KEY);
@@ -22,24 +24,25 @@
       return;
     }
 
-    // Pages restricted to admin only
-    const ADMIN_PAGES = [
-      'Planificador_BoxDental.html'
-    ];
+    // Permisos por página: lista de roles permitidos
+    const PAGE_ROLES = {
+      'Planificador_BoxDental.html':    ['admin'],
+      'Reportes_BoxDental.html':        ['admin', 'subadmin'],
+      'CuentasPorPagar_BoxDental.html': ['admin', 'subadmin'],
+    };
 
-    // Check if current page is admin-only
-    const currentPage = window.location.pathname.split('/').pop();
-    const isAdminPage = ADMIN_PAGES.some(p => currentPage.includes(p));
+    const currentPage = (window.location.pathname.split('/').pop() || 'index.html');
+    const requiredRoles = PAGE_ROLES[currentPage];
 
-    if (isAdminPage && s.role !== 'admin') {
-      // Not authorized - redirect to index with error
+    if (requiredRoles && !requiredRoles.includes(s.role)) {
       sessionStorage.setItem('bxd_access_denied', '1');
       window.location.href = 'index.html';
       return;
     }
 
-    // Session valid - expose user info
+    // Exponer info de sesión a la página
     window.BXD_USER = { user: s.user, name: s.name, role: s.role };
+
   } catch(e) {
     window.location.href = 'index.html';
   }

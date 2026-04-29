@@ -23,27 +23,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .login-remember input{accent-color:#60A5FA;width:16px;height:16px}
 
 /* MAIN CONTENT */
-.container{max-width:900px;width:100%;text-align:center;display:none}
+.container{max-width:960px;width:100%;text-align:center;display:none}
 .logo-section{margin-bottom:30px}
 .logo-section img{height:80px;border-radius:14px;background:#fff;padding:8px 16px;box-shadow:0 8px 32px rgba(0,0,0,.3)}
 .logo-section h1{font-size:1.8rem;font-weight:800;margin-top:14px;text-shadow:0 2px 8px rgba(0,0,0,.3)}
 .logo-section p{font-size:.9rem;opacity:.75;margin-top:6px}
-.user-bar{margin-top:8px;font-size:.82rem;opacity:.65;display:flex;align-items:center;justify-content:center;gap:8px}
+.user-bar{margin-top:8px;font-size:.82rem;opacity:.65;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .user-bar .logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;font-weight:600;transition:all .12s}
 .user-bar .logout:hover{background:rgba(239,68,68,.6)}
-.apps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:30px}
-.app-card{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:28px 22px;text-align:center;cursor:pointer;transition:all .2s;text-decoration:none;color:#fff}
+.apps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:30px}
+.app-card{background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:26px 20px;text-align:center;cursor:pointer;transition:all .2s;text-decoration:none;color:#fff;position:relative}
 .app-card:hover{transform:translateY(-4px);background:rgba(255,255,255,.18);box-shadow:0 12px 40px rgba(0,0,0,.3)}
-.app-icon{font-size:2.8rem;margin-bottom:12px}
-.app-title{font-size:1.1rem;font-weight:700;margin-bottom:6px}
-.app-desc{font-size:.82rem;opacity:.7;line-height:1.4}
+.app-icon{font-size:2.6rem;margin-bottom:10px}
+.app-title{font-size:1rem;font-weight:700;margin-bottom:5px}
+.app-desc{font-size:.78rem;opacity:.7;line-height:1.4}
 .footer{margin-top:40px;font-size:.75rem;opacity:.5;line-height:1.6}
-.app-card.locked{opacity:.35;cursor:not-allowed;pointer-events:none;position:relative}
+.app-card.locked{opacity:.3;cursor:not-allowed;pointer-events:none}
 .app-card.locked::after{content:'🔒';position:absolute;top:10px;right:14px;font-size:1.2rem}
 .app-card.locked:hover{transform:none;box-shadow:none}
 .role-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.72rem;font-weight:700;margin-left:8px}
-.role-badge.admin{background:rgba(239,68,68,.25);color:#FCA5A5}
-.role-badge.subadmin{background:rgba(251,191,36,.25);color:#FCD34D}
+.role-badge.admin{background:rgba(239,68,68,.3);color:#FCA5A5}
+.role-badge.subadmin{background:rgba(251,191,36,.3);color:#FCD34D}
+.role-badge.vendedor{background:rgba(52,211,153,.3);color:#6EE7B7}
 .access-denied{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 16px;font-size:.82rem;color:#FCA5A5;margin-bottom:16px;display:none}
 @media(max-width:480px){
   body{padding:12px}
@@ -101,22 +102,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script src="firebase-sync.js?v=3"></script>
 <script>
 // ═══ CREDENTIALS & ROLES ═══
-// role: 'admin' = acceso total | 'subadmin' = solo inventario, facturación, reportes
+// admin    → acceso total + edición inventario + reportes + todas las funciones
+// subadmin → inventario (lectura), facturación, caja, CxP, reportes, chat
+// vendedor → solo facturación + caja + chat (sin reportes, sin editar inventario)
 const USERS = {
-  'admin':    { pass: 'boxdental2026', name: 'Administrador',      role: 'admin' },
-  'fernando': { pass: 'bxd2026',       name: 'Fernando Sánchez',   role: 'admin' },
-  'ventas':   { pass: 'ventas2026',    name: 'Ventas BoxDental',   role: 'subadmin' }
+  'admin':    { pass: 'boxdental2026', name: 'Administrador',    role: 'admin' },
+  'fernando': { pass: 'bxd2026',       name: 'Fernando Sánchez', role: 'admin' },
+  'ventas':   { pass: 'ventas2026',    name: 'Ventas BoxDental', role: 'vendedor' }
 };
 
-// Apps configuration with permissions
+// allowedRoles: qué roles pueden abrir este módulo
 const APPS = [
-  { href:'Planificador_BoxDental.html', icon:'📊', title:'Centro de Control',     desc:'Dashboard, planificador diario y gestión de tareas con seguimiento de progreso', adminOnly:true },
-  { href:'Conteo_Inventario_BoxDental.html', icon:'📦', title:'Inventario',       desc:'Conteo de inventario, control de stock, proveedores y productos con 900+ items', adminOnly:false },
-  { href:'Facturacion_BoxDental.html',  icon:'🧾', title:'Notas de Venta',        desc:'Notas de venta, cotizaciones, pagos y conversión de documentos', adminOnly:false },
-  { href:'Caja_BoxDental.html',         icon:'🏦', title:'Caja del Día',          desc:'Apertura y cierre de caja, movimientos, cobros y créditos pendientes', adminOnly:false },
-  { href:'CuentasPorPagar_BoxDental.html', icon:'💳', title:'Cuentas por Pagar',  desc:'Facturas de proveedores, pagos pendientes y actualización automática de inventario', adminOnly:false },
-  { href:'Chat_BoxDental.html',         icon:'💬', title:'Chat Interno',           desc:'Mensajería en tiempo real entre el equipo con imágenes, texto y audio',          adminOnly:false },
+  { href:'Planificador_BoxDental.html',     icon:'📊', title:'Centro de Control',  desc:'Dashboard, planificador y gestión de tareas',                         allowedRoles:['admin'] },
+  { href:'Conteo_Inventario_BoxDental.html',icon:'📦', title:'Inventario',         desc:'Stock, proveedores y productos · Edición solo admin',                 allowedRoles:['admin','subadmin','vendedor'] },
+  { href:'Facturacion_BoxDental.html',      icon:'🧾', title:'Notas de Venta',     desc:'Notas de venta, cotizaciones, pagos y créditos',                      allowedRoles:['admin','subadmin','vendedor'] },
+  { href:'Caja_BoxDental.html',             icon:'🏦', title:'Caja del Día',       desc:'Apertura/cierre, movimientos y cobros pendientes',                    allowedRoles:['admin','subadmin','vendedor'] },
+  { href:'CuentasPorPagar_BoxDental.html',  icon:'💳', title:'Cuentas por Pagar',  desc:'Facturas de proveedores y actualización de inventario',               allowedRoles:['admin','subadmin'] },
+  { href:'Reportes_BoxDental.html',         icon:'📈', title:'Reportes',            desc:'Ventas, compras, rentabilidad, rotación y análisis del negocio',      allowedRoles:['admin','subadmin'] },
+  { href:'Chat_BoxDental.html',             icon:'💬', title:'Chat Interno',        desc:'Mensajería en tiempo real entre el equipo',                           allowedRoles:['admin','subadmin','vendedor'] },
 ];
+
+const ROLE_LABELS = {
+  admin:    'Administrador',
+  subadmin: 'Sub-Administrador',
+  vendedor: 'Vendedor'
+};
 
 const SESSION_KEY = 'bxd_session_v1';
 
@@ -138,18 +148,13 @@ function doLogin() {
     return;
   }
 
-  // Save session with role
-  const session = { user: user, name: u.name, role: u.role, ts: Date.now(), fbPass: pass };
-  if (remember) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  }
+  const session = { user, name: u.name, role: u.role, ts: Date.now(), fbPass: pass };
+  if (remember) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 
-  // Firebase sign-in (non-blocking)
   if (window.BXD_FB && BXD_FB.signIn) {
-    BXD_FB.signIn(user, pass).catch(function(e) { console.warn('[BXD_FB] Auth:', e.message); });
+    BXD_FB.signIn(user, pass).catch(e => console.warn('[BXD_FB]', e.message));
   }
-
   showApp(u.name, u.role);
 }
 
@@ -157,29 +162,27 @@ function showApp(name, role) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
 
-  const roleLabel = role === 'admin' ? 'Administrador' : 'Sub-Administrador';
-  const roleBadge = '<span class="role-badge ' + role + '">' + roleLabel + '</span>';
-  document.getElementById('userLabel').innerHTML = '👤 ' + name + roleBadge;
+  const rlabel = ROLE_LABELS[role] || role;
+  const rbadge = `<span class="role-badge ${role}">${rlabel}</span>`;
+  document.getElementById('userLabel').innerHTML = '👤 ' + name + rbadge;
 
-  // Render apps based on role
   const grid = document.getElementById('appsGrid');
   grid.innerHTML = APPS.map(app => {
-    const locked = app.adminOnly && role !== 'admin';
-    if (locked) {
-      return '<div class="app-card locked">' +
-        '<div class="app-icon">' + app.icon + '</div>' +
-        '<div class="app-title">' + app.title + '</div>' +
-        '<div class="app-desc">🔒 Solo administradores</div>' +
-      '</div>';
+    const allowed = app.allowedRoles.includes(role);
+    if (!allowed) {
+      return `<div class="app-card locked">
+        <div class="app-icon">${app.icon}</div>
+        <div class="app-title">${app.title}</div>
+        <div class="app-desc" style="color:#f87171">🔒 Sin acceso — contacta al administrador</div>
+      </div>`;
     }
-    return '<a href="' + app.href + '" class="app-card">' +
-      '<div class="app-icon">' + app.icon + '</div>' +
-      '<div class="app-title">' + app.title + '</div>' +
-      '<div class="app-desc">' + app.desc + '</div>' +
-    '</a>';
+    return `<a href="${app.href}" class="app-card">
+      <div class="app-icon">${app.icon}</div>
+      <div class="app-title">${app.title}</div>
+      <div class="app-desc">${app.desc}</div>
+    </a>`;
   }).join('');
 
-  // Show access denied message if redirected
   if (sessionStorage.getItem('bxd_access_denied')) {
     document.getElementById('accessDenied').style.display = 'block';
     sessionStorage.removeItem('bxd_access_denied');
@@ -199,28 +202,18 @@ function doLogout() {
   document.getElementById('loginUser').focus();
 }
 
-// Check existing session
 function checkSession() {
   const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
   if (!raw) return false;
   try {
     const s = JSON.parse(raw);
-    // Session valid for 30 days
-    if (Date.now() - s.ts > 30 * 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(SESSION_KEY);
-      return false;
-    }
+    if (Date.now() - s.ts > 30 * 24 * 60 * 60 * 1000) { localStorage.removeItem(SESSION_KEY); return false; }
     showApp(s.name, s.role);
     return true;
   } catch(e) { return false; }
 }
 
-// Init
-if (!checkSession()) {
-  document.getElementById('loginUser').focus();
-}
-
-// Enter key to login
+if (!checkSession()) document.getElementById('loginUser').focus();
 document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
 </script>
