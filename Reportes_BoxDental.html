@@ -600,7 +600,7 @@ function refreshDashboard(){
   const totalDocs=yFacts.length;
   const avgTicket=totalDocs>0?totalVentas/totalDocs:0;
   const totalClientes=new Set(yFacts.map(f=>f.cliente?.ruc)).size;
-  const totalUnits=yFacts.reduce((s,f)=>s+f.items.reduce((a,it)=>a+it.qty,0),0);
+  const totalUnits=yFacts.reduce((s,f)=>s+(f.items||[]).reduce((a,it)=>a+(it.qty||0),0),0);
   const totalAnuladas=facturas.filter(f=>f.fecha?.startsWith(year)&&f.estado==='ANULADA').length;
   // Previous year comparison
   const py=String(parseInt(year)-1);
@@ -648,7 +648,7 @@ function renderChartTipoDoc(facts){
 }
 function renderChartTopProds(facts){
   const prods={};
-  facts.forEach(f=>f.items.forEach(it=>{prods[it.nombre]=(prods[it.nombre]||0)+it.qty;}));
+  facts.forEach(f=>(f.items||[]).forEach(it=>{if(it.nombre)prods[it.nombre]=(prods[it.nombre]||0)+(it.qty||0);}));
   const sorted=Object.entries(prods).sort((a,b)=>b[1]-a[1]).slice(0,10);
   destroyChart('chartTopProds');
   charts.chartTopProds=new Chart(document.getElementById('chartTopProds'),{
@@ -1170,11 +1170,18 @@ function renderBalance(desde, hasta) {
 }
 
 function exportComprasCSV() {
-  const rows = [['Nº', 'Fecha', 'Proveedor', 'Factura', 'Categoría', 'Subtotal', 'IVA%', 'IVA$', 'Total', 'Método', 'Descripción']];
-  compras.forEach(c => { rows.push(['CP-' + fmtNum(c.id), c.fecha, c.proveedor, c.factNum, c.categoria,
-    c.subtotal.toFixed(2), c.iva, c.tax.toFixed(2), c.total.toFixed(2), c.metodo, c.desc]); });
+  // Compras de inventario (Ingresar Compra desde Facturación)
+  const rows = [['Tipo','Fecha','Proveedor','Nº Factura Prov.','Responsable','Estado Pago','Método','Total','Productos']];
+  comprasFactura.forEach(c => {
+    const prods = (c.items||[]).map(it=>`${it.nombre||''} x${it.qty||1}`).join(' | ');
+    rows.push(['Compra Inventario', c.fecha, c.proveedor, c.numFactProv||'', c.responsable||'',
+      c.estadoPago||'', c.metodoPago||'', (c.total||0).toFixed(2), prods]);
+  });
+  // Gastos simples (Reportes)
+  compras.forEach(c => { rows.push(['Gasto', c.fecha, c.proveedor, c.factNum||'', '', 'cancelada',
+    c.metodo||'', c.total.toFixed(2), c.desc||'']); });
   downloadBlob(csvBlob(rows), 'Compras_BoxDental_' + today() + '.csv');
-  toast('✅ CSV de compras exportado', 'ok');
+  toast('✅ CSV exportado (' + (comprasFactura.length + compras.length) + ' registros)', 'ok');
 }
 
 // ═══════════════════════════════════════════════════════════
