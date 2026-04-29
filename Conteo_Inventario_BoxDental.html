@@ -158,6 +158,39 @@ td{padding:6px 10px;vertical-align:middle}
 .ventas-hist td{padding:5px 8px;border-bottom:1px solid #f0f0f0}
 .ventas-hist .total-row{background:#eff6ff;font-weight:700}
 .ventas-hist .sin-ventas{color:var(--muted);font-size:12px;padding:12px;text-align:center}
+
+/* ── HISTORIAL COMPRAS ── */
+.cmp-hist{margin-top:16px;border-top:2px solid #e0e7ff;padding-top:14px}
+.cmp-hist h3{font-size:14px;margin-bottom:10px;color:#4f46e5;display:flex;align-items:center;gap:6px}
+.cmp-summary-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.cmp-kpi{background:#f5f3ff;border:1px solid #e0e7ff;border-radius:8px;padding:8px 12px;flex:1;min-width:100px;text-align:center}
+.cmp-kpi .kv{font-size:16px;font-weight:800;color:#4f46e5}
+.cmp-kpi .kl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.cmp-timeline{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cmp-tl-item{display:flex;gap:10px;align-items:flex-start;position:relative;padding-left:24px}
+.cmp-tl-item::before{content:'';position:absolute;left:7px;top:0;bottom:-8px;width:2px;background:#e0e7ff}
+.cmp-tl-item:last-child::before{display:none}
+.cmp-tl-dot{position:absolute;left:0;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid #4f46e5;background:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#4f46e5;flex-shrink:0}
+.cmp-tl-dot.first{background:#4f46e5;color:#fff}
+.cmp-tl-dot.last{background:#059669;border-color:#059669;color:#fff}
+.cmp-tl-body{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;flex:1;font-size:12px}
+.cmp-tl-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cmp-tl-fecha{font-weight:700;color:#1f2937}
+.cmp-tl-prov{color:#4f46e5;font-weight:600}
+.cmp-tl-costo{font-size:14px;font-weight:800;color:#059669}
+.cmp-tl-var{font-size:11px;font-weight:700;padding:1px 6px;border-radius:10px}
+.cmp-tl-var.up{background:#fee2e2;color:#dc2626}
+.cmp-tl-var.dn{background:#dcfce7;color:#059669}
+.cmp-tl-var.eq{background:#f1f5f9;color:#64748b}
+.cmp-tl-meta{color:#6b7280;font-size:11px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.cmp-price-bar{margin-top:10px;margin-bottom:4px}
+.cmp-price-bar-label{font-size:10px;color:#6b7280;margin-bottom:4px;font-weight:600;text-transform:uppercase}
+.cmp-price-bars{display:flex;gap:3px;align-items:flex-end;height:40px}
+.cmp-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}
+.cmp-bar{width:100%;border-radius:3px 3px 0 0;background:#4f46e5;opacity:.7;transition:opacity .15s;cursor:default;min-height:4px}
+.cmp-bar:hover{opacity:1}
+.cmp-bar-val{font-size:9px;color:#4f46e5;font-weight:700}
+.cmp-sin{color:#94a3b8;font-size:12px;padding:16px;text-align:center;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0}
 .c-extra{font-size:11px;color:var(--muted);min-width:80px}
 .c-prov{font-size:11px;color:var(--muted);min-width:100px;max-width:130px}
 .prov-chip{background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:10px;
@@ -504,6 +537,7 @@ td{padding:6px 10px;vertical-align:middle}
   </div>
 
   <div class="ventas-hist" id="detalleVentas"></div>
+  <div class="cmp-hist" id="detalleCompras"></div>
 
   <div class="modal-footer">
     <button class="btn btn-w" style="border:1px solid var(--border)" onclick="closeDetalle()">Cancelar</button>
@@ -1466,6 +1500,9 @@ function openDetalle(id) {
   const sales = getSalesHistory(id);
   const ventasDiv = document.getElementById('detalleVentas');
   ventasDiv.innerHTML = '<h3>📊 Historial de Ventas</h3>' + renderSalesTable(sales, getNombre(id));
+  // purchase history
+  const purchases = getPurchaseHistory(id);
+  renderPurchaseHistory(purchases);
   document.getElementById('modalDetalle').classList.add('open');
 }
 
@@ -1568,6 +1605,160 @@ function renderSalesTable(sales, productName) {
   </tr>`;
   html += '</tbody></table>';
   return html;
+}
+
+// ── HISTORIAL DE COMPRAS POR PRODUCTO ───────────────────
+function getPurchaseHistory(productId) {
+  try {
+    const raw = localStorage.getItem('bxd_fact_v1');
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    const compras = data.compras || [];
+    const history = [];
+    compras.forEach(function(c) {
+      (c.items || []).forEach(function(it) {
+        if (parseInt(it.id) === parseInt(productId)) {
+          history.push({
+            fecha:       c.fecha || '',
+            proveedor:   c.proveedor || '—',
+            numFactProv: c.numFactProv || '',
+            responsable: c.responsable || '',
+            lote:        it.lote || '',
+            qty:         parseFloat(it.qty) || 0,
+            costo:       parseFloat(it.costo) || 0,
+            pvp:         parseFloat(it.pvp) || 0,
+            pctGanancia: parseFloat(it.pctGanancia) || 0,
+            fechaCad:    it.fechaCad || '',
+            estadoPago:  c.estadoPago || ''
+          });
+        }
+      });
+    });
+    history.sort(function(a, b) { return (a.fecha || '').localeCompare(b.fecha || ''); });
+    return history;
+  } catch(e) { return []; }
+}
+
+function renderPurchaseHistory(history) {
+  const wrap = document.getElementById('detalleCompras');
+  if (!wrap) return;
+
+  if (!history.length) {
+    wrap.innerHTML = '<div class="cmp-hist"><h3>📦 Historial de Compras</h3><div class="cmp-sin">📭 Sin compras registradas para este producto.<br>Usa <strong>Ingresar Compra</strong> en Notas de Venta para registrar facturas de proveedores.</div></div>';
+    return;
+  }
+
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function fmtFecha(f) {
+    if (!f) return '—';
+    const d = new Date(f + 'T12:00:00');
+    return meses[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function fmtDate(f) {
+    if (!f) return '—';
+    const d = new Date(f + 'T12:00:00');
+    return d.toLocaleDateString('es-EC');
+  }
+
+  // ── KPIs ──
+  const primera = history[0];
+  const ultima  = history[history.length - 1];
+  const totalQty    = history.reduce(function(s, h) { return s + h.qty; }, 0);
+  const costoInicio = primera.costo;
+  const costoActual = ultima.costo;
+  const varTotal    = costoInicio > 0 ? ((costoActual - costoInicio) / costoInicio * 100) : 0;
+  const varColor    = varTotal > 0 ? '#dc2626' : varTotal < 0 ? '#059669' : '#64748b';
+  const varIcon     = varTotal > 0 ? '▲' : varTotal < 0 ? '▼' : '=';
+  const provs       = [...new Set(history.map(function(h) { return h.proveedor; }))];
+
+  let html = '<h3>📦 Historial de Compras <span style="font-size:11px;font-weight:500;color:#6b7280;margin-left:4px">(' + history.length + ' compra' + (history.length > 1 ? 's' : '') + ')</span></h3>';
+
+  // Summary KPIs
+  html += '<div class="cmp-summary-bar">';
+  html += '<div class="cmp-kpi"><div class="kv">' + fmtFecha(primera.fecha) + '</div><div class="kl">Primera compra</div></div>';
+  html += '<div class="cmp-kpi"><div class="kv">' + fmtFecha(ultima.fecha) + '</div><div class="kl">Última compra</div></div>';
+  html += '<div class="cmp-kpi"><div class="kv">' + totalQty.toLocaleString('es-EC', {minimumFractionDigits:0, maximumFractionDigits:2}) + ' u</div><div class="kl">Total comprado</div></div>';
+  html += '<div class="cmp-kpi"><div class="kv" style="color:' + varColor + '">' + varIcon + ' ' + Math.abs(varTotal).toFixed(1) + '%</div><div class="kl">Variación precio</div></div>';
+  html += '</div>';
+
+  // ── Gráfico de barras de precios ──
+  if (history.length > 1) {
+    const maxCosto = Math.max.apply(null, history.map(function(h) { return h.costo; }));
+    html += '<div class="cmp-price-bar">';
+    html += '<div class="cmp-price-bar-label">Evolución del costo de compra</div>';
+    html += '<div class="cmp-price-bars">';
+    history.forEach(function(h) {
+      const pct = maxCosto > 0 ? Math.max(8, (h.costo / maxCosto) * 100) : 50;
+      const isFirst = h === primera;
+      const isLast  = h === ultima;
+      const barColor = isFirst ? '#818cf8' : isLast ? '#059669' : '#4f46e5';
+      html += '<div class="cmp-bar-wrap" title="' + fmtFecha(h.fecha) + ': $' + h.costo.toFixed(2) + '">';
+      html += '<div class="cmp-bar-val">$' + h.costo.toFixed(2) + '</div>';
+      html += '<div class="cmp-bar" style="height:' + pct + '%;background:' + barColor + '"></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    // Etiquetas de mes bajo las barras
+    html += '<div style="display:flex;gap:3px;margin-top:2px">';
+    history.forEach(function(h) {
+      html += '<div style="flex:1;text-align:center;font-size:9px;color:#94a3b8">' + fmtFecha(h.fecha) + '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // ── Timeline ──
+  html += '<div class="cmp-timeline">';
+  history.forEach(function(h, i) {
+    const isFirst = i === 0;
+    const isLast  = i === history.length - 1;
+    const dotClass = isFirst ? 'first' : isLast && history.length > 1 ? 'last' : '';
+    const dotLabel = isFirst ? '1' : String(i + 1);
+
+    // Variación respecto a la compra anterior
+    let varHTML = '';
+    if (i > 0) {
+      const prev = history[i - 1].costo;
+      if (prev > 0 && h.costo !== prev) {
+        const varPct = ((h.costo - prev) / prev * 100);
+        const cls = varPct > 0 ? 'up' : 'dn';
+        const ic  = varPct > 0 ? '▲' : '▼';
+        varHTML = '<span class="cmp-tl-var ' + cls + '">' + ic + ' ' + Math.abs(varPct).toFixed(1) + '%</span>';
+      } else if (prev > 0) {
+        varHTML = '<span class="cmp-tl-var eq">= sin cambio</span>';
+      }
+    } else {
+      varHTML = '<span class="cmp-tl-var eq">1ª compra</span>';
+    }
+
+    html += '<div class="cmp-tl-item">';
+    html += '<div class="cmp-tl-dot ' + dotClass + '">' + dotLabel + '</div>';
+    html += '<div class="cmp-tl-body">';
+    html += '<div class="cmp-tl-top">';
+    html += '<span class="cmp-tl-fecha">' + fmtDate(h.fecha) + '</span>';
+    html += '<span class="cmp-tl-prov">🏢 ' + escH(h.proveedor) + '</span>';
+    html += '<span class="cmp-tl-costo">$' + h.costo.toFixed(4).replace(/\.?0+$/, '') + '</span>';
+    if (h.pvp > 0) html += '<span style="font-size:11px;color:#059669;font-weight:700">PVP: $' + h.pvp.toFixed(2) + '</span>';
+    html += varHTML;
+    html += '</div>';
+    // Meta info
+    const meta = [];
+    if (h.qty)         meta.push('📦 ' + h.qty + ' u compradas');
+    if (h.lote)        meta.push('🏷 Lote: ' + escH(h.lote));
+    if (h.fechaCad)    meta.push('⏳ Cad: ' + fmtDate(h.fechaCad));
+    if (h.numFactProv) meta.push('📄 Fact: ' + escH(h.numFactProv));
+    if (h.responsable) meta.push('👤 ' + escH(h.responsable));
+    if (meta.length) html += '<div class="cmp-tl-meta">' + meta.join('&nbsp;·&nbsp;') + '</div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  // Proveedores usados
+  if (provs.length > 1) {
+    html += '<div style="font-size:11px;color:#6b7280;margin-top:4px">🏢 Proveedores: ' +
+      provs.map(function(p) { return '<span style="background:#e0e7ff;color:#3730a3;padding:1px 7px;border-radius:10px;font-weight:600">' + escH(p) + '</span>'; }).join(' ') + '</div>';
+  }
+
+  wrap.innerHTML = html;
 }
 
 function verHistorialVentas(id) {
